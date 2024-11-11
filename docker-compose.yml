@@ -2,31 +2,22 @@ version: '3.8'
 
 services:
   db:
-    image: postgres:16.3
-    container_name: diploma-verification-db
+    image: postgres:latest
+    container_name: diploma-blockchain
     environment:
       POSTGRES_USER: kareemabdose
       POSTGRES_PASSWORD: Kabdo-2001
-      POSTGRES_DB: diploma-verification
+      POSTGRES_DB: diploma-blockchain
     ports:
-      - '5432:5432'
+      - '5433:5432'
     volumes:
-      - db-data:/var/lib/postgresql/data
-
-  app:
-    build: .
-    container_name: diploma-verification-app
-    depends_on:
-      - db
-    environment:
-      DB_USER: kareemabdose
-      DB_PASSWORD: Kabdo-2001
-      DB_NAME: diploma-verification
-      DB_HOST: db
-      DB_PORT: 5432
-    volumes:
-      - .:/usr/src/app
-    working_dir: /usr/src/app
+      - pgdata:/var/lib/postgresql/data
+    networks:
+      - my_network
 
 volumes:
-  db-data:
+  pgdata:
+
+networks:
+  my_network:
+    driver: bridge
