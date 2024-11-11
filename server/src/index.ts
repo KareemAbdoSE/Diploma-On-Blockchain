@@ -5,6 +5,7 @@ import helmet from 'helmet';
 import cors from 'cors';
 import rateLimit from 'express-rate-limit';
 import logger from './logger';
+import { sequelize } from './database';
 
 dotenv.config();
 
@@ -24,11 +25,23 @@ const limiter = rateLimit({
 app.use(limiter);
 
 // Health Check Endpoint
-app.get('/api/health', (req, res) => {
-  logger.info('Health check endpoint was called');
-  res.status(200).send('Server is healthy');
+app.get('/api/health', async (req, res) => {
+  try {
+    await sequelize.authenticate();
+    res.status(200).send('Server is healthy and database is connected');
+  } catch (error) {
+    logger.error('Database connection error:', error);
+    res.status(500).send('Database connection error');
+  }
 });
 
-app.listen(PORT, () => {
-  logger.info(`Server is running on port ${PORT}`);
+// Start Server
+app.listen(PORT, async () => {
+  try {
+    await sequelize.sync();
+    logger.info('Database synced successfully.');
+    logger.info(`Server is running on port ${PORT}`);
+  } catch (error) {
+    logger.error('Unable to sync database:', error);
+  }
 });
