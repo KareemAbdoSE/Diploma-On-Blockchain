@@ -13,13 +13,13 @@ import bcrypt from 'bcrypt';
 
 @Table({
   tableName: 'users',
-  timestamps: true,
+  timestamps: true,             // Adds createdAt and updatedAt timestamps
 })
 export class User extends Model<User> {
   @Column({
     type: DataType.STRING,
     allowNull: false,
-    unique: true,
+    unique: true,               // Ensures email addresses are unique
   })
   email!: string;
 
@@ -27,18 +27,19 @@ export class User extends Model<User> {
     type: DataType.STRING,
     allowNull: false,
   })
-  password!: string;
+  password!: string;            // Hashed password
 
   @ForeignKey(() => Role)
   @Column({
     type: DataType.INTEGER,
     allowNull: false,
   })
-  roleId!: number;
+  roleId!: number;              // Foreign key to Role
 
   @BelongsTo(() => Role)
-  role!: Role;
+  role!: Role;                  // Association with Role
 
+  // Hash password before saving to the database
   @BeforeSave
   static async hashPassword(user: User) {
     if (user.changed('password')) {

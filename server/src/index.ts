@@ -7,15 +7,15 @@ import rateLimit from 'express-rate-limit';
 import logger from './logger';
 import { sequelize } from './database';
 
-dotenv.config();
+dotenv.config(); // Load environment variables
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
 // Security Middleware
-app.use(helmet());
-app.use(cors());
-app.use(express.json());
+app.use(helmet());          // Sets various HTTP headers for security
+app.use(cors());            // Enables Cross-Origin Resource Sharing
+app.use(express.json());    // Parses incoming JSON requests
 
 // Rate Limiting
 const limiter = rateLimit({
@@ -27,7 +27,7 @@ app.use(limiter);
 // Health Check Endpoint
 app.get('/api/health', async (req, res) => {
   try {
-    await sequelize.authenticate();
+    await sequelize.authenticate();                                        // Test database connection
     res.status(200).send('Server is healthy and database is connected');
   } catch (error) {
     logger.error('Database connection error:', error);
