@@ -6,10 +6,10 @@ import prettierConfig from 'eslint-config-prettier';
 
 export default [
   {
-    ignores: ['node_modules/**', 'dist/**'],
+    ignores: ['node_modules/**', 'dist/**'], // Ignore node_modules and dist directories
   },
   {
-    files: ['src/**/*.{ts,tsx}'],
+    files: ['src/**/*.{ts,tsx}'],  // Apply to TypeScript files
     languageOptions: {
       parser: typescriptParser,
       parserOptions: {
@@ -24,9 +24,9 @@ export default [
       prettier: prettierPlugin,
     },
     rules: {
-      ...typescriptPlugin.configs.recommended.rules,
-      ...prettierConfig.rules,
-      'prettier/prettier': 'error',
+      ...typescriptPlugin.configs.recommended.rules, // Use recommended TypeScript rules
+      ...prettierConfig.rules,                       // Apply Prettier rules
+      'prettier/prettier': 'error',                  // Show Prettier errors as ESLint errors
     },
   },
 ];

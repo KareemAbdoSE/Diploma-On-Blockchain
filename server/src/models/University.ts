@@ -9,14 +9,14 @@ export class University extends Model<University> {
   @Column({
     type: DataType.STRING,
     allowNull: false,
-    unique: true,
+    unique: true,                // Ensures university names are unique
   })
   name!: string;
 
   @Column({
     type: DataType.STRING,
     allowNull: false,
-    unique: true,
+    unique: true,                // Ensures domains are unique
   })
   domain!: string;
 
@@ -24,5 +24,5 @@ export class University extends Model<University> {
     type: DataType.TEXT,
     allowNull: true,
   })
-  accreditationDetails!: string;
+  accreditationDetails!: string; // Optional accreditation details
 }

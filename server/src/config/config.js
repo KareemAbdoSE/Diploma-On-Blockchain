@@ -1,5 +1,5 @@
 // src/config/config.js
-require('dotenv').config();
+require('dotenv').config(); // Load environment variables from .env file
 
 module.exports = {
   development: {

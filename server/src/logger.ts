@@ -1,6 +1,7 @@
 // src/logger.ts
 import { createLogger, format, transports } from 'winston';
 
+// Configure the Winston logger
 const logger = createLogger({
   level: 'info',
   format: format.combine(
