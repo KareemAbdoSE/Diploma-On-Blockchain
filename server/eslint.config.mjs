@@ -1,26 +1,32 @@
-import globals from 'globals';
-import pluginJs from '@eslint/js';
-import pluginPrettier from 'eslint-plugin-prettier';
-import airbnbBase from 'eslint-config-airbnb-base';
+// eslint.config.mjs
+import typescriptPlugin from '@typescript-eslint/eslint-plugin';
+import typescriptParser from '@typescript-eslint/parser';
+import prettierPlugin from 'eslint-plugin-prettier';
+import prettierConfig from 'eslint-config-prettier';
 
-/** @type {import('eslint').Linter.FlatConfig[]} */
 export default [
   {
-    files: ['**/*.{js,mjs,cjs}'],
+    ignores: ['node_modules/**', 'dist/**'],
+  },
+  {
+    files: ['src/**/*.{ts,tsx}'],
     languageOptions: {
-      globals: {
-        ...globals.browser,
-        ...globals.node, // Adds Node.js-specific globals like require and process
+      parser: typescriptParser,
+      parserOptions: {
+        project: './tsconfig.json',
+        tsconfigRootDir: './',
+        sourceType: 'module',
+        ecmaVersion: 2020,
       },
     },
-    rules: {
-      ...pluginJs.configs.recommended.rules,
-      ...airbnbBase.rules,
-      ...pluginPrettier.configs.recommended.rules,
-      'prettier/prettier': 'error', // Enforce Prettier formatting as errors
-    },
     plugins: {
-      prettier: pluginPrettier,
+      '@typescript-eslint': typescriptPlugin,
+      prettier: prettierPlugin,
+    },
+    rules: {
+      ...typescriptPlugin.configs.recommended.rules,
+      ...prettierConfig.rules,
+      'prettier/prettier': 'error',
     },
   },
 ];
