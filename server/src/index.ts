@@ -6,6 +6,7 @@ import cors from 'cors';
 import rateLimit from 'express-rate-limit';
 import logger from './logger';
 import { sequelize } from './database';
+import authRoutes from './routes/authRoutes';
 
 dotenv.config(); // Load environment variables
 
@@ -23,6 +24,9 @@ const limiter = rateLimit({
   max: 100, // Limit each IP to 100 requests per windowMs
 });
 app.use(limiter);
+
+// Use Auth Routes
+app.use('/api/auth', authRoutes);
 
 // Health Check Endpoint
 app.get('/api/health', async (req, res) => {

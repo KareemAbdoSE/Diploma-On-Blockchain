@@ -11,15 +11,21 @@ import {
 import { Role } from './Role';
 import bcrypt from 'bcrypt';
 
+export interface UserCreationAttributes {
+  email: string;
+  password: string;
+  roleId: number;
+}
+
 @Table({
   tableName: 'users',
-  timestamps: true,             // Adds createdAt and updatedAt timestamps
+  timestamps: true,
 })
-export class User extends Model<User> {
+export class User extends Model<User, UserCreationAttributes> {
   @Column({
     type: DataType.STRING,
     allowNull: false,
-    unique: true,               // Ensures email addresses are unique
+    unique: true,
   })
   email!: string;
 
@@ -27,28 +33,27 @@ export class User extends Model<User> {
     type: DataType.STRING,
     allowNull: false,
   })
-  password!: string;            // Hashed password
+  password!: string;
 
   @ForeignKey(() => Role)
   @Column({
     type: DataType.INTEGER,
     allowNull: false,
   })
-  roleId!: number;              // Foreign key to Role
+  roleId!: number;
 
   @BelongsTo(() => Role)
-  role!: Role;                  // Association with Role
+  role!: Role;
 
   // Hash password before saving to the database
   @BeforeSave
   static async hashPassword(user: User) {
     if (user.changed('password')) {
-      const saltRounds = 12;
-      user.password = await bcrypt.hash(user.password, saltRounds);
+      user.password = await bcrypt.hash(user.password, 12);
     }
   }
 
-  // Method to compare passwords
+  // Method to compare plain text password with hashed password
   async validatePassword(password: string): Promise<boolean> {
     return bcrypt.compare(password, this.password);
   }
