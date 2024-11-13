@@ -17,6 +17,8 @@ The Diploma Verification System is a secure platform that leverages blockchain t
 - **Database Integration**: Set up PostgreSQL database using Docker Compose.
 - **ORM Configuration**: Configured Sequelize ORM with TypeScript support.
 - **Models and Migrations**: Created models and initial database migration scripts for User, Role, and University entities.
+- **User Authentication**: Implemented user registration and login with secure password hashing and JWT-based authentication. Configured middleware to protect routes using JWT.
+
 
 ## Project Status
 
@@ -38,6 +40,12 @@ The Diploma Verification System is a secure platform that leverages blockchain t
   - Passwords are hashed using **bcrypt** with a strong salt factor.
   - SQL injection prevention through parameterized queries in Sequelize.
   - Sensitive data is managed securely and not exposed in the codebase.
+- **User Authentication System**:
+  - Implemented endpoints for user registration and login.
+  - Enforced strong password policies and secure password hashing with bcrypt.
+  - Configured JWT-based authentication for secure access to protected routes.
+  - JWT secret stored securely in environment variables.
+
 
 Please stay tuned for updates. The repository will be updated regularly as development progresses.
 
@@ -167,6 +175,7 @@ Ensure you have the following installed:
 - **Authentication**: Password hashing with bcrypt
 - **Payment Gateway**: Stripe or PayPal (to be decided)
 - **Storage**: IPFS for off-chain data storage
+- - **Authentication**: JSON Web Token (JWT) for user sessions and bcrypt for secure password hashing.
 
 ## Contributing
 
