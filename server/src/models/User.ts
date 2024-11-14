@@ -15,6 +15,7 @@ export interface UserCreationAttributes {
   email: string;
   password: string;
   roleId: number;
+  isVerified?: boolean; // Optional during creation
 }
 
 @Table({
@@ -45,6 +46,13 @@ export class User extends Model<User, UserCreationAttributes> {
   @BelongsTo(() => Role)
   role!: Role;
 
+  @Column({
+    type: DataType.BOOLEAN,
+    allowNull: false,
+    defaultValue: false, // Users start as unverified
+  })
+  isVerified!: boolean;
+
   // Hash password before saving to the database
   @BeforeSave
   static async hashPassword(user: User) {
@@ -58,3 +66,5 @@ export class User extends Model<User, UserCreationAttributes> {
     return bcrypt.compare(password, this.password);
   }
 }
+
+export default User;
