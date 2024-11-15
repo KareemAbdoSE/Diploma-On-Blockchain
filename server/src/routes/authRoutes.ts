@@ -1,11 +1,12 @@
 // src/routes/authRoutes.ts
 import express from 'express';
-import { register, login } from '../controllers/authController';
+import { register, login, confirmEmail } from '../controllers/authController';
 import { body } from 'express-validator';
 import asyncHandler from '../utils/asyncHandler';
 
 const router = express.Router();
 
+// Registration Route
 router.post(
   '/register',
   [
@@ -15,6 +16,7 @@ router.post(
   asyncHandler(register) // Wrap register in asyncHandler
 );
 
+// Login Route
 router.post(
   '/login',
   [
@@ -22,6 +24,12 @@ router.post(
     body('password').exists().withMessage('Password is required'),
   ],
   asyncHandler(login) // Wrap login in asyncHandler
+);
+
+// Email Verification Route
+router.get(
+  '/confirm-email',
+  asyncHandler(confirmEmail) // Wrap confirmEmail in asyncHandler
 );
 
 export default router;
