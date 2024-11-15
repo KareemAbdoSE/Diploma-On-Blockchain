@@ -3,7 +3,6 @@ import { Request, Response } from 'express';
 import { User, UserCreationAttributes } from '../models/User';
 import jwt from 'jsonwebtoken';
 import { validationResult } from 'express-validator';
-import bcrypt from 'bcrypt';
 import transporter from '../config/emailConfig';
 import crypto from 'crypto';
 import VerificationToken from '../models/VerificationToken';
@@ -25,13 +24,13 @@ export const register = async (req: Request, res: Response) => {
       return res.status(400).json({ message: 'Email already registered' });
     }
 
-    // Hash the password
-    const hashedPassword = await bcrypt.hash(password, 12);
+    // Remove the manual password hashing
+    // const hashedPassword = await bcrypt.hash(password, 12);
 
-    // Create a new user with the hashed password
+    // Create a new user with the plain text password
     const user = await User.create({
       email,
-      password: hashedPassword,
+      password, // Pass the plain text password; it will be hashed in the model
       roleId,
       isVerified: false,  // New users are unverified by default
     } as UserCreationAttributes);
@@ -77,8 +76,8 @@ export const login = async (req: Request, res: Response) => {
       return res.status(400).json({ message: 'Please verify your email before logging in.' });
     }
 
-    // Validate password using bcrypt
-    const isPasswordValid = await bcrypt.compare(password, user.password);
+    // Use the validatePassword method from the User model
+    const isPasswordValid = await user.validatePassword(password);
     if (!isPasswordValid) {
       return res.status(400).json({ message: 'Invalid email or password' });
     }
@@ -96,7 +95,7 @@ export const login = async (req: Request, res: Response) => {
   }
 };
 
-// Email verification function
+// Email verification function (unchanged)
 export const confirmEmail = async (req: Request, res: Response) => {
   const { token } = req.query;
 
