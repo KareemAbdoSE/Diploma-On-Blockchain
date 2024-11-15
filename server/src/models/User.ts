@@ -1,4 +1,6 @@
 // src/models/User.ts
+// src/models/User.ts
+
 import {
   Table,
   Column,
@@ -8,14 +10,16 @@ import {
   BelongsTo,
   BeforeSave,
 } from 'sequelize-typescript';
-import { Role } from './Role';
 import bcrypt from 'bcrypt';
+import { Role } from './Role';
+import { University } from './University';
 
 export interface UserCreationAttributes {
   email: string;
   password: string;
   roleId: number;
-  isVerified?: boolean; // Optional during creation
+  isVerified?: boolean;
+  universityId?: number;
 }
 
 @Table({
@@ -46,10 +50,20 @@ export class User extends Model<User, UserCreationAttributes> {
   @BelongsTo(() => Role)
   role!: Role;
 
+  @ForeignKey(() => University)
+  @Column({
+    type: DataType.INTEGER,
+    allowNull: true,
+  })
+  universityId!: number;
+
+  @BelongsTo(() => University)
+  university!: University;
+
   @Column({
     type: DataType.BOOLEAN,
     allowNull: false,
-    defaultValue: false, // Users start as unverified
+    defaultValue: false,
   })
   isVerified!: boolean;
 
@@ -61,7 +75,7 @@ export class User extends Model<User, UserCreationAttributes> {
     }
   }
 
-  // Method to compare plain text password with hashed password
+  // **Add the validatePassword method here**
   async validatePassword(password: string): Promise<boolean> {
     return bcrypt.compare(password, this.password);
   }

@@ -7,15 +7,17 @@ import transporter from '../config/emailConfig';
 import crypto from 'crypto';
 import VerificationToken from '../models/VerificationToken';
 import { Op } from 'sequelize';
+import { Role } from '../models/Role'; // Updated import
+import InvitationToken from '../models/InvitationToken';
 
-// Register function with email verification token creation
+
 export const register = async (req: Request, res: Response) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
     return res.status(400).json({ errors: errors.array() });
   }
 
-  const { email, password, roleId } = req.body;
+  const { email, password } = req.body;
 
   try {
     // Check if the user already exists
@@ -24,15 +26,18 @@ export const register = async (req: Request, res: Response) => {
       return res.status(400).json({ message: 'Email already registered' });
     }
 
-    // Remove the manual password hashing
-    // const hashedPassword = await bcrypt.hash(password, 12);
+    // Get the Student role
+    const studentRole = await Role.findOne({ where: { name: 'Student' } });
+    if (!studentRole) {
+      return res.status(500).json({ message: 'Student role not found' });
+    }
 
-    // Create a new user with the plain text password
+    // Create a new user with the Student role
     const user = await User.create({
       email,
-      password, // Pass the plain text password; it will be hashed in the model
-      roleId,
-      isVerified: false,  // New users are unverified by default
+      password,
+      roleId: studentRole.id,
+      isVerified: false,
     } as UserCreationAttributes);
 
     // Generate and save a verification token
@@ -60,13 +65,12 @@ export const register = async (req: Request, res: Response) => {
   }
 };
 
-// Login function with email verification check
 export const login = async (req: Request, res: Response) => {
   const { email, password } = req.body;
 
   try {
-    // Find user by email
-    const user = await User.findOne({ where: { email } });
+    // Explicitly type user as User | null
+    const user: User | null = await User.findOne({ where: { email } });
     if (!user) {
       return res.status(400).json({ message: 'Invalid email or password' });
     }
@@ -82,7 +86,7 @@ export const login = async (req: Request, res: Response) => {
       return res.status(400).json({ message: 'Invalid email or password' });
     }
 
-    // Generate JWT token directly in the login function
+    // Generate JWT token
     const token = jwt.sign(
       { userId: user.id, roleId: user.roleId },
       process.env.JWT_SECRET as string,
@@ -95,7 +99,7 @@ export const login = async (req: Request, res: Response) => {
   }
 };
 
-// Email verification function (unchanged)
+
 export const confirmEmail = async (req: Request, res: Response) => {
   const { token } = req.query;
 
@@ -103,7 +107,7 @@ export const confirmEmail = async (req: Request, res: Response) => {
     const verificationToken = await VerificationToken.findOne({
       where: {
         token,
-        expiresAt: { [Op.gt]: new Date() }, // Token must not be expired
+        expiresAt: { [Op.gt]: new Date() },
       },
     });
 
@@ -126,5 +130,60 @@ export const confirmEmail = async (req: Request, res: Response) => {
     return res.status(200).json({ message: 'Email verified successfully' });
   } catch (error) {
     return res.status(500).json({ message: 'Error verifying email', error });
+  }
+};
+
+export const registerUniversityAdmin = async (req: Request, res: Response) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({ errors: errors.array() });
+  }
+
+  const { token, password } = req.body;
+
+  try {
+    const invitation = await InvitationToken.findOne({
+      where: {
+        token,
+        expiresAt: { [Op.gt]: new Date() },
+      },
+    });
+
+    if (!invitation) {
+      return res.status(400).json({ message: 'Invalid or expired invitation token' });
+    }
+
+    const { email, universityId } = invitation;
+
+    // Check if the user already exists
+    const existingUser = await User.findOne({ where: { email } });
+    if (existingUser) {
+      return res.status(400).json({ message: 'Email already registered' });
+    }
+
+    // Get the UniversityAdmin role
+    const universityAdminRole = await Role.findOne({ where: { name: 'UniversityAdmin' } });
+    if (!universityAdminRole) {
+      return res.status(500).json({ message: 'UniversityAdmin role not found' });
+    }
+
+    // Create the new user
+    const user = await User.create({
+      email,
+      password,
+      roleId: universityAdminRole.id,
+      isVerified: true,
+      universityId,
+    } as UserCreationAttributes);
+
+    // Delete the invitation token after use
+    await InvitationToken.destroy({ where: { id: invitation.id } });
+
+    return res.status(201).json({
+      message: 'University Admin registered successfully.',
+      userId: user.id,
+    });
+  } catch (error) {
+    return res.status(500).json({ message: 'Error registering university admin', error });
   }
 };

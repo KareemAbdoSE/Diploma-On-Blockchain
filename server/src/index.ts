@@ -7,31 +7,33 @@ import rateLimit from 'express-rate-limit';
 import logger from './logger';
 import { sequelize } from './database';
 import authRoutes from './routes/authRoutes';
+import universityRoutes from './routes/universityRoutes';
 
-dotenv.config(); // Load environment variables
+dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
 // Security Middleware
-app.use(helmet());          // Sets various HTTP headers for security
-app.use(cors());            // Enables Cross-Origin Resource Sharing
-app.use(express.json());    // Parses incoming JSON requests
+app.use(helmet());
+app.use(cors());
+app.use(express.json());
 
 // Rate Limiting
 const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // Limit each IP to 100 requests per windowMs
+  windowMs: 15 * 60 * 1000,
+  max: 100,
 });
 app.use(limiter);
 
-// Use Auth Routes
+// Routes
 app.use('/api/auth', authRoutes);
+app.use('/api/universities', universityRoutes);
 
 // Health Check Endpoint
 app.get('/api/health', async (req, res) => {
   try {
-    await sequelize.authenticate();                                        // Test database connection
+    await sequelize.authenticate();
     res.status(200).send('Server is healthy and database is connected');
   } catch (error) {
     logger.error('Database connection error:', error);
