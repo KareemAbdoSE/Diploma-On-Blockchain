@@ -1,19 +1,19 @@
 // src/routes/authRoutes.ts
 import express from 'express';
-import { register, login, confirmEmail } from '../controllers/authController';
+import { register, login, confirmEmail, registerUniversityAdmin } from '../controllers/authController';
 import { body } from 'express-validator';
 import asyncHandler from '../utils/asyncHandler';
 
 const router = express.Router();
 
-// Registration Route
+// Registration Route for Students
 router.post(
   '/register',
   [
     body('email').isEmail().withMessage('Enter a valid email'),
     body('password').isLength({ min: 8 }).withMessage('Password must be at least 8 characters long'),
   ],
-  asyncHandler(register) // Wrap register in asyncHandler
+  asyncHandler(register)
 );
 
 // Login Route
@@ -23,13 +23,23 @@ router.post(
     body('email').isEmail().withMessage('Enter a valid email'),
     body('password').exists().withMessage('Password is required'),
   ],
-  asyncHandler(login) // Wrap login in asyncHandler
+  asyncHandler(login)
 );
 
 // Email Verification Route
 router.get(
   '/confirm-email',
-  asyncHandler(confirmEmail) // Wrap confirmEmail in asyncHandler
+  asyncHandler(confirmEmail)
+);
+
+// University Admin Registration Route
+router.post(
+  '/register-university-admin',
+  [
+    body('token').notEmpty().withMessage('Invitation token is required'),
+    body('password').isLength({ min: 8 }).withMessage('Password must be at least 8 characters long'),
+  ],
+  asyncHandler(registerUniversityAdmin)
 );
 
 export default router;

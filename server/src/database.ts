@@ -6,6 +6,7 @@ import { User } from './models/User';
 import { Role } from './models/Role';
 import { University } from './models/University';
 import { VerificationToken } from './models/VerificationToken'; // Import VerificationToken model
+import { InvitationToken } from './models/InvitationToken';
 
 dotenv.config(); // Load environment variables
 
@@ -17,6 +18,6 @@ export const sequelize = new Sequelize({
   username: process.env.DB_USER || 'kareemabdoser',
   password: process.env.DB_PASSWORD || 'Kabdo-2001',
   database: process.env.DB_NAME || 'diploma-blockchain',
-  models: [User, Role, University, VerificationToken], // Register all models, including VerificationToken
+  models: [User, Role, University, VerificationToken, InvitationToken], // Register all models, including VerificationToken
   logging: false,
 });

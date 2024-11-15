@@ -1,5 +1,6 @@
 // src/models/Role.ts
 import { Table, Column, Model, DataType } from 'sequelize-typescript';
+import University from './University';
 
 @Table({
   tableName: 'roles',
@@ -13,3 +14,5 @@ export class Role extends Model<Role> {
   })
   name!: string;
 }
+
+export default Role;
