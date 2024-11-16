@@ -1,8 +1,18 @@
 // src/routes/authRoutes.ts
+
 import express from 'express';
-import { register, login, confirmEmail, registerUniversityAdmin } from '../controllers/authController';
+import {
+  register,
+  login,
+  setupMFA,
+  verifyMFASetup,
+  regenerateBackupCodes,
+  confirmEmail,
+  registerUniversityAdmin,
+} from '../controllers/authController';
 import { body } from 'express-validator';
 import asyncHandler from '../utils/asyncHandler';
+import { authenticateJWT } from '../middlewares/authMiddleware';
 
 const router = express.Router();
 
@@ -26,11 +36,22 @@ router.post(
   asyncHandler(login)
 );
 
-// Email Verification Route
-router.get(
-  '/confirm-email',
-  asyncHandler(confirmEmail)
+// MFA Setup
+router.post('/mfa/setup', authenticateJWT, asyncHandler(setupMFA));
+
+// Verify MFA Setup
+router.post(
+  '/mfa/verify-setup',
+  authenticateJWT,
+  [body('token').notEmpty().withMessage('MFA token is required')],
+  asyncHandler(verifyMFASetup)
 );
+
+// Regenerate Backup Codes
+router.post('/mfa/backup-codes', authenticateJWT, asyncHandler(regenerateBackupCodes));
+
+// Email Verification Route
+router.get('/confirm-email', asyncHandler(confirmEmail));
 
 // University Admin Registration Route
 router.post(

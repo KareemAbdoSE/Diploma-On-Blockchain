@@ -1,89 +1,107 @@
 // src/controllers/authController.ts
+
 import { Request, Response } from 'express';
 import { User, UserCreationAttributes } from '../models/User';
-import jwt from 'jsonwebtoken';
+import { Role } from '../models/Role';
 import { validationResult } from 'express-validator';
-import transporter from '../config/emailConfig';
+import jwt from 'jsonwebtoken';
+import speakeasy from 'speakeasy';
+import QRCode from 'qrcode';
 import crypto from 'crypto';
+import dotenv from 'dotenv';
 import VerificationToken from '../models/VerificationToken';
-import { Op } from 'sequelize';
-import { Role } from '../models/Role'; // Updated import
 import InvitationToken from '../models/InvitationToken';
+import { Op } from 'sequelize';
 
+dotenv.config();
 
 export const register = async (req: Request, res: Response) => {
-  const errors = validationResult(req);
-  if (!errors.isEmpty()) {
-    return res.status(400).json({ errors: errors.array() });
-  }
-
   const { email, password } = req.body;
 
   try {
-    // Check if the user already exists
+    // Validate input
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ errors: errors.array() });
+    }
+
+    // Check if user already exists
     const existingUser = await User.findOne({ where: { email } });
     if (existingUser) {
-      return res.status(400).json({ message: 'Email already registered' });
+      return res.status(409).json({ message: 'Email already in use' });
     }
 
     // Get the Student role
-    const studentRole = await Role.findOne({ where: { name: 'Student' } });
-    if (!studentRole) {
-      return res.status(500).json({ message: 'Student role not found' });
+    const role = await Role.findOne({ where: { name: 'Student' } });
+    if (!role) {
+      return res.status(500).json({ message: 'Role not found' });
     }
 
-    // Create a new user with the Student role
+    // Create new user
     const user = await User.create({
       email,
       password,
-      roleId: studentRole.id,
+      roleId: role.id,
       isVerified: false,
-    } as UserCreationAttributes);
-
-    // Generate and save a verification token
-    const verificationToken = crypto.randomBytes(32).toString('hex');
-    await VerificationToken.create({
-      userId: user.id,
-      token: verificationToken,
-      expiresAt: new Date(Date.now() + 3600000), // Token valid for 1 hour
     });
 
-    // Send verification email
-    const verificationUrl = `${process.env.BASE_URL}/api/auth/confirm-email?token=${verificationToken}`;
-    await transporter.sendMail({
-      to: email,
-      subject: 'Verify Your Email',
-      html: `<p>Please verify your email by clicking on the following link: <a href="${verificationUrl}">${verificationUrl}</a></p>`,
-    });
+    // TODO: Send verification email
 
-    return res.status(201).json({
-      message: 'User registered successfully. Please verify your email to complete registration.',
-      userId: user.id,
-    });
+    return res.status(201).json({ message: 'Registration successful. Please verify your email.' });
   } catch (error) {
     return res.status(500).json({ message: 'Error registering user', error });
   }
 };
 
 export const login = async (req: Request, res: Response) => {
-  const { email, password } = req.body;
+  const { email, password, token: mfaToken, backupCode } = req.body;
 
   try {
-    // Explicitly type user as User | null
-    const user: User | null = await User.findOne({ where: { email } });
-    if (!user) {
-      return res.status(400).json({ message: 'Invalid email or password' });
+    // Validate input
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ errors: errors.array() });
     }
 
-    // Check if the user is verified
+    // Retrieve the user
+    const user = await User.findOne({ where: { email } });
+
+    if (!user || !(await user.validatePassword(password))) {
+      return res.status(401).json({ message: 'Invalid email or password' });
+    }
+
     if (!user.isVerified) {
-      return res.status(400).json({ message: 'Please verify your email before logging in.' });
+      return res.status(403).json({ message: 'Please verify your email before logging in' });
     }
 
-    // Use the validatePassword method from the User model
-    const isPasswordValid = await user.validatePassword(password);
-    if (!isPasswordValid) {
-      return res.status(400).json({ message: 'Invalid email or password' });
+    // If MFA is enabled
+    if (user.mfaEnabled) {
+      if (!mfaToken && !backupCode) {
+        return res.status(400).json({ message: 'MFA token or backup code is required' });
+      }
+
+      let mfaVerified = false;
+
+      if (mfaToken) {
+        // Verify TOTP token
+        mfaVerified = speakeasy.totp.verify({
+          secret: user.mfaSecret!,
+          encoding: 'base32',
+          token: mfaToken,
+        });
+      } else if (backupCode) {
+        // Verify backup code
+        if (user.mfaBackupCodes && user.mfaBackupCodes.includes(backupCode)) {
+          mfaVerified = true;
+          // Remove used backup code
+          user.mfaBackupCodes = user.mfaBackupCodes.filter((code) => code !== backupCode);
+          await user.save();
+        }
+      }
+
+      if (!mfaVerified) {
+        return res.status(400).json({ message: 'Invalid MFA token or backup code' });
+      }
     }
 
     // Generate JWT token
@@ -99,6 +117,126 @@ export const login = async (req: Request, res: Response) => {
   }
 };
 
+export const setupMFA = async (req: Request, res: Response) => {
+  const userId = req.user?.userId;
+
+  try {
+    if (!userId) {
+      return res.status(401).json({ message: 'Unauthorized' });
+    }
+
+    // Retrieve the user
+    const user = await User.findByPk(userId);
+
+    if (!user) {
+      return res.status(400).json({ message: 'User not found' });
+    }
+
+    // Generate MFA secret
+    const secret = speakeasy.generateSecret({
+      name: `Diploma Verification (${user.email})`,
+    });
+
+    // Temporarily store the secret
+    user.mfaTempSecret = secret.base32;
+
+    // Generate QR code
+    const otpAuthURL = secret.otpauth_url;
+
+    if (!otpAuthURL) {
+      return res.status(500).json({ message: 'Error generating OTP Auth URL' });
+    }
+
+    // Generate QR code image URL
+    const qrCodeDataURL = await QRCode.toDataURL(otpAuthURL);
+
+    // Send the QR code to the client
+    return res.status(200).json({
+      message: 'MFA setup initiated',
+      qrCodeDataURL,
+      // base32Secret: secret.base32, // Do not send in production
+    });
+  } catch (error) {
+    return res.status(500).json({ message: 'Error setting up MFA', error });
+  }
+};
+
+export const verifyMFASetup = async (req: Request, res: Response) => {
+  const userId = req.user?.userId;
+  const { token } = req.body;
+
+  try {
+    if (!userId) {
+      return res.status(401).json({ message: 'Unauthorized' });
+    }
+
+    // Retrieve the user
+    const user = await User.findByPk(userId);
+
+    if (!user || !user.mfaTempSecret) {
+      return res.status(400).json({ message: 'MFA setup not initiated' });
+    }
+
+    // Verify the token
+    const verified = speakeasy.totp.verify({
+      secret: user.mfaTempSecret,
+      encoding: 'base32',
+      token,
+    });
+
+    if (verified) {
+      // Save the MFA secret
+      user.mfaSecret = user.mfaTempSecret;
+      user.mfaEnabled = true;
+      user.mfaTempSecret = undefined;
+
+      // Generate backup codes
+      const backupCodes = generateBackupCodes();
+      user.mfaBackupCodes = backupCodes;
+
+      await user.save();
+
+      return res.status(200).json({
+        message: 'MFA setup complete',
+        backupCodes, // Provide backup codes to the user
+      });
+    } else {
+      return res.status(400).json({ message: 'Invalid MFA token' });
+    }
+  } catch (error) {
+    return res.status(500).json({ message: 'Error verifying MFA setup', error });
+  }
+};
+
+export const regenerateBackupCodes = async (req: Request, res: Response) => {
+  const userId = req.user?.userId;
+
+  try {
+    if (!userId) {
+      return res.status(401).json({ message: 'Unauthorized' });
+    }
+
+    // Retrieve the user
+    const user = await User.findByPk(userId);
+
+    if (!user || !user.mfaEnabled) {
+      return res.status(400).json({ message: 'MFA is not enabled for this user' });
+    }
+
+    // Generate new backup codes
+    const backupCodes = generateBackupCodes();
+    user.mfaBackupCodes = backupCodes;
+
+    await user.save();
+
+    return res.status(200).json({
+      message: 'Backup codes regenerated',
+      backupCodes,
+    });
+  } catch (error) {
+    return res.status(500).json({ message: 'Error regenerating backup codes', error });
+  }
+};
 
 export const confirmEmail = async (req: Request, res: Response) => {
   const { token } = req.query;
@@ -186,4 +324,14 @@ export const registerUniversityAdmin = async (req: Request, res: Response) => {
   } catch (error) {
     return res.status(500).json({ message: 'Error registering university admin', error });
   }
+};
+
+// Utility function to generate backup codes
+const generateBackupCodes = (): string[] => {
+  const backupCodes: string[] = [];
+  for (let i = 0; i < 5; i++) {
+    const code = crypto.randomBytes(4).toString('hex');
+    backupCodes.push(code);
+  }
+  return backupCodes;
 };
