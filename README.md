@@ -18,6 +18,11 @@ The Diploma Verification System is a secure platform that leverages blockchain t
 - **ORM Configuration**: Configured Sequelize ORM with TypeScript support.
 - **Models and Migrations**: Created models and initial database migration scripts for User, Role, and University entities.
 - **User Authentication**: Implemented user registration and login with secure password hashing and JWT-based authentication. Configured middleware to protect routes using JWT.
+- **University Registration and Verification**: Implemented an endpoint (`POST /api/universities/register`) for PlatformAdmins to register universities. Collects necessary university details and stores them securely. A mocked admin verification process is in place.
+- **Role-Based Access Control (RBAC)**: Set up RBAC to distinguish between different user roles: Student, UniversityAdmin, and PlatformAdmin. Ensures only authorized users can perform specific actions, such as registering universities.
+- **Email Verification System**: Implemented email verification to enhance user security, generating time-limited, single-use tokens upon registration.
+- **Security Enhancements**: Input validation and sanitization have been implemented to ensure data integrity and prevent security vulnerabilities.
+
 
 
 ## Project Status
@@ -45,6 +50,17 @@ The Diploma Verification System is a secure platform that leverages blockchain t
   - Enforced strong password policies and secure password hashing with bcrypt.
   - Configured JWT-based authentication for secure access to protected routes.
   - JWT secret stored securely in environment variables.
+- **University Registration Endpoint Implemented**:
+  - Added an endpoint (`POST /api/universities/register`) for PlatformAdmins to register universities, with necessary validations and security measures.
+  - Collected necessary university details and stored them securely.
+  - Implemented a mocked admin verification process.
+- **Role Definitions and RBAC**:
+  - Defined roles: Student, UniversityAdmin, PlatformAdmin.
+  - Set up role-based access control (RBAC) throughout the application to distinguish user roles and ensure only authorized users can perform certain actions.
+- **Email Verification System**:
+  - Configured email service using Nodemailer to send verification emails.
+  - Implemented endpoints for email verification to enhance account security.
+
 
 
 Please stay tuned for updates. The repository will be updated regularly as development progresses.
@@ -175,7 +191,13 @@ Ensure you have the following installed:
 - **Authentication**: Password hashing with bcrypt
 - **Payment Gateway**: Stripe or PayPal (to be decided)
 - **Storage**: IPFS for off-chain data storage
-- - **Authentication**: JSON Web Token (JWT) for user sessions and bcrypt for secure password hashing.
+- **Authentication**:
+  - Password hashing with bcrypt.
+  - JSON Web Token (JWT) for user sessions and secure access to protected routes.
+  - Email verification using Nodemailer.
+- **Role-Based Access Control (RBAC)**: Implemented to manage permissions based on user roles (Student, UniversityAdmin, PlatformAdmin).
+
+
 
 ## Contributing
 
