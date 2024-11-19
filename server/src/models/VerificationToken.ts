@@ -12,7 +12,7 @@ import { User } from './User';
 
 @Table({
   tableName: 'verification_tokens',
-  timestamps: false, // Only using createdAt explicitly, so no automatic timestamps
+  timestamps: false,
 })
 export class VerificationToken extends Model {
   @ForeignKey(() => User)

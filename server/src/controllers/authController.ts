@@ -11,10 +11,13 @@ import crypto from 'crypto';
 import dotenv from 'dotenv';
 import VerificationToken from '../models/VerificationToken';
 import InvitationToken from '../models/InvitationToken';
+import transporter from '../config/emailConfig';
 import { Op } from 'sequelize';
+import logger from '../logger';
 
 dotenv.config();
 
+// Register function with email verification token creation
 export const register = async (req: Request, res: Response) => {
   const { email, password } = req.body;
 
@@ -45,9 +48,26 @@ export const register = async (req: Request, res: Response) => {
       isVerified: false,
     });
 
-    // TODO: Send verification email
+    // Generate and save a verification token
+    const verificationToken = crypto.randomBytes(32).toString('hex');
+    await VerificationToken.create({
+      userId: user.id,
+      token: verificationToken,
+      expiresAt: new Date(Date.now() + 3600000), // Token valid for 1 hour
+    });
 
-    return res.status(201).json({ message: 'Registration successful. Please verify your email.' });
+    // Send verification email
+    const verificationUrl = `${process.env.BASE_URL}/api/auth/confirm-email?token=${verificationToken}`;
+    await transporter.sendMail({
+      to: email,
+      subject: 'Verify Your Email',
+      html: `<p>Please verify your email by clicking on the following link: <a href="${verificationUrl}">${verificationUrl}</a></p>`,
+    });
+
+    return res.status(201).json({
+      message: 'User registered successfully. Please verify your email to complete registration.',
+      userId: user.id,
+    });
   } catch (error) {
     return res.status(500).json({ message: 'Error registering user', error });
   }
@@ -91,11 +111,18 @@ export const login = async (req: Request, res: Response) => {
         });
       } else if (backupCode) {
         // Verify backup code
-        if (user.mfaBackupCodes && user.mfaBackupCodes.includes(backupCode)) {
-          mfaVerified = true;
-          // Remove used backup code
-          user.mfaBackupCodes = user.mfaBackupCodes.filter((code) => code !== backupCode);
-          await user.save();
+        if (user.mfaBackupCodes && user.mfaBackupCodes.length > 0) {
+          const normalizedBackupCodes = user.mfaBackupCodes.map((code) => code.toLowerCase());
+          const providedBackupCode = backupCode.trim().toLowerCase();
+
+          if (normalizedBackupCodes.includes(providedBackupCode)) {
+            mfaVerified = true;
+            // Remove used backup code
+            user.mfaBackupCodes = user.mfaBackupCodes.filter(
+              (code) => code.toLowerCase() !== providedBackupCode
+            );
+            await user.save();
+          }
         }
       }
 
@@ -113,7 +140,7 @@ export const login = async (req: Request, res: Response) => {
 
     return res.status(200).json({ message: 'Login successful', token });
   } catch (error) {
-    return res.status(500).json({ message: 'Error logging in', error });
+    return res.status(500).json({ message: 'An unexpected error occurred during login.' });
   }
 };
 
@@ -137,8 +164,9 @@ export const setupMFA = async (req: Request, res: Response) => {
       name: `Diploma Verification (${user.email})`,
     });
 
-    // Temporarily store the secret
+    // Temporarily store the secret in the database
     user.mfaTempSecret = secret.base32;
+    await user.save();
 
     // Generate QR code
     const otpAuthURL = secret.otpauth_url;
@@ -188,7 +216,7 @@ export const verifyMFASetup = async (req: Request, res: Response) => {
       // Save the MFA secret
       user.mfaSecret = user.mfaTempSecret;
       user.mfaEnabled = true;
-      user.mfaTempSecret = undefined;
+      user.mfaTempSecret = null; // Clear the temp secret
 
       // Generate backup codes
       const backupCodes = generateBackupCodes();
