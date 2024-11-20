@@ -1,5 +1,3 @@
-// src/controllers/authController.ts
-
 import { Request, Response } from 'express';
 import { User, UserCreationAttributes } from '../models/User';
 import { Role } from '../models/Role';
@@ -13,7 +11,6 @@ import VerificationToken from '../models/VerificationToken';
 import InvitationToken from '../models/InvitationToken';
 import transporter from '../config/emailConfig';
 import { Op } from 'sequelize';
-import logger from '../logger';
 
 dotenv.config();
 
@@ -74,7 +71,7 @@ export const register = async (req: Request, res: Response) => {
 };
 
 export const login = async (req: Request, res: Response) => {
-  const { email, password, token: mfaToken, backupCode } = req.body;
+  const { email, password, token: mfaToken } = req.body;
 
   try {
     // Validate input
@@ -96,38 +93,18 @@ export const login = async (req: Request, res: Response) => {
 
     // If MFA is enabled
     if (user.mfaEnabled) {
-      if (!mfaToken && !backupCode) {
-        return res.status(400).json({ message: 'MFA token or backup code is required' });
+      if (!mfaToken) {
+        return res.status(400).json({ message: 'MFA token is required' });
       }
 
-      let mfaVerified = false;
-
-      if (mfaToken) {
-        // Verify TOTP token
-        mfaVerified = speakeasy.totp.verify({
-          secret: user.mfaSecret!,
-          encoding: 'base32',
-          token: mfaToken,
-        });
-      } else if (backupCode) {
-        // Verify backup code
-        if (user.mfaBackupCodes && user.mfaBackupCodes.length > 0) {
-          const normalizedBackupCodes = user.mfaBackupCodes.map((code) => code.toLowerCase());
-          const providedBackupCode = backupCode.trim().toLowerCase();
-
-          if (normalizedBackupCodes.includes(providedBackupCode)) {
-            mfaVerified = true;
-            // Remove used backup code
-            user.mfaBackupCodes = user.mfaBackupCodes.filter(
-              (code) => code.toLowerCase() !== providedBackupCode
-            );
-            await user.save();
-          }
-        }
-      }
+      const mfaVerified = speakeasy.totp.verify({
+        secret: user.mfaSecret!,
+        encoding: 'base32',
+        token: mfaToken,
+      });
 
       if (!mfaVerified) {
-        return res.status(400).json({ message: 'Invalid MFA token or backup code' });
+        return res.status(400).json({ message: 'Invalid MFA token' });
       }
     }
 
@@ -182,7 +159,6 @@ export const setupMFA = async (req: Request, res: Response) => {
     return res.status(200).json({
       message: 'MFA setup initiated',
       qrCodeDataURL,
-      // base32Secret: secret.base32, // Do not send in production
     });
   } catch (error) {
     return res.status(500).json({ message: 'Error setting up MFA', error });
@@ -218,51 +194,16 @@ export const verifyMFASetup = async (req: Request, res: Response) => {
       user.mfaEnabled = true;
       user.mfaTempSecret = null; // Clear the temp secret
 
-      // Generate backup codes
-      const backupCodes = generateBackupCodes();
-      user.mfaBackupCodes = backupCodes;
-
       await user.save();
 
       return res.status(200).json({
         message: 'MFA setup complete',
-        backupCodes, // Provide backup codes to the user
       });
     } else {
       return res.status(400).json({ message: 'Invalid MFA token' });
     }
   } catch (error) {
     return res.status(500).json({ message: 'Error verifying MFA setup', error });
-  }
-};
-
-export const regenerateBackupCodes = async (req: Request, res: Response) => {
-  const userId = req.user?.userId;
-
-  try {
-    if (!userId) {
-      return res.status(401).json({ message: 'Unauthorized' });
-    }
-
-    // Retrieve the user
-    const user = await User.findByPk(userId);
-
-    if (!user || !user.mfaEnabled) {
-      return res.status(400).json({ message: 'MFA is not enabled for this user' });
-    }
-
-    // Generate new backup codes
-    const backupCodes = generateBackupCodes();
-    user.mfaBackupCodes = backupCodes;
-
-    await user.save();
-
-    return res.status(200).json({
-      message: 'Backup codes regenerated',
-      backupCodes,
-    });
-  } catch (error) {
-    return res.status(500).json({ message: 'Error regenerating backup codes', error });
   }
 };
 
@@ -352,14 +293,4 @@ export const registerUniversityAdmin = async (req: Request, res: Response) => {
   } catch (error) {
     return res.status(500).json({ message: 'Error registering university admin', error });
   }
-};
-
-// Utility function to generate backup codes
-const generateBackupCodes = (): string[] => {
-  const backupCodes: string[] = [];
-  for (let i = 0; i < 5; i++) {
-    const code = crypto.randomBytes(4).toString('hex');
-    backupCodes.push(code);
-  }
-  return backupCodes;
 };

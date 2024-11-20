@@ -1,12 +1,9 @@
-// src/routes/authRoutes.ts
-
 import express from 'express';
 import {
   register,
   login,
   setupMFA,
   verifyMFASetup,
-  regenerateBackupCodes,
   confirmEmail,
   registerUniversityAdmin,
 } from '../controllers/authController';
@@ -46,9 +43,6 @@ router.post(
   [body('token').notEmpty().withMessage('MFA token is required')],
   asyncHandler(verifyMFASetup)
 );
-
-// Regenerate Backup Codes
-router.post('/mfa/backup-codes', authenticateJWT, asyncHandler(regenerateBackupCodes));
 
 // Email Verification Route
 router.get('/confirm-email', asyncHandler(confirmEmail));

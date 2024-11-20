@@ -1,4 +1,3 @@
-// src/models/User.ts
 import {
   Table,
   Column,
@@ -117,12 +116,6 @@ export class User extends Model<User, UserCreationAttributes> {
     },
   })
   mfaTempSecret!: string | null;
-
-  @Column({
-    type: DataType.JSONB,
-    allowNull: true,
-  })
-  mfaBackupCodes!: string[] | null;
 
   @BeforeSave
   static async hashPassword(instance: User) {
