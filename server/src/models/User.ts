@@ -1,18 +1,16 @@
-// src/models/User.ts
-// src/models/User.ts
-
 import {
   Table,
   Column,
   Model,
   DataType,
+  BeforeSave,
   ForeignKey,
   BelongsTo,
-  BeforeSave,
 } from 'sequelize-typescript';
 import bcrypt from 'bcrypt';
 import { Role } from './Role';
 import { University } from './University';
+import CryptoJS from 'crypto-js';
 
 export interface UserCreationAttributes {
   email: string;
@@ -55,7 +53,7 @@ export class User extends Model<User, UserCreationAttributes> {
     type: DataType.INTEGER,
     allowNull: true,
   })
-  universityId!: number;
+  universityId!: number | null;
 
   @BelongsTo(() => University)
   university!: University;
@@ -67,18 +65,67 @@ export class User extends Model<User, UserCreationAttributes> {
   })
   isVerified!: boolean;
 
-  // Hash password before saving to the database
+  // MFA Fields
+  @Column({
+    type: DataType.BOOLEAN,
+    allowNull: false,
+    defaultValue: false,
+  })
+  mfaEnabled!: boolean;
+
+  @Column({
+    type: DataType.STRING,
+    allowNull: true,
+    get() {
+      const encrypted = this.getDataValue('mfaSecret');
+      if (encrypted) {
+        const bytes = CryptoJS.AES.decrypt(encrypted, process.env.MFA_SECRET_KEY!);
+        return bytes.toString(CryptoJS.enc.Utf8);
+      }
+      return null;
+    },
+    set(value: string | null) {
+      if (value) {
+        const encrypted = CryptoJS.AES.encrypt(value, process.env.MFA_SECRET_KEY!).toString();
+        this.setDataValue('mfaSecret', encrypted);
+      } else {
+        this.setDataValue('mfaSecret', null);
+      }
+    },
+  })
+  mfaSecret!: string | null;
+
+  @Column({
+    type: DataType.STRING,
+    allowNull: true,
+    get() {
+      const encrypted = this.getDataValue('mfaTempSecret');
+      if (encrypted) {
+        const bytes = CryptoJS.AES.decrypt(encrypted, process.env.MFA_SECRET_KEY!);
+        return bytes.toString(CryptoJS.enc.Utf8);
+      }
+      return null;
+    },
+    set(value: string | null) {
+      if (value) {
+        const encrypted = CryptoJS.AES.encrypt(value, process.env.MFA_SECRET_KEY!).toString();
+        this.setDataValue('mfaTempSecret', encrypted);
+      } else {
+        this.setDataValue('mfaTempSecret', null);
+      }
+    },
+  })
+  mfaTempSecret!: string | null;
+
   @BeforeSave
-  static async hashPassword(user: User) {
-    if (user.changed('password')) {
-      user.password = await bcrypt.hash(user.password, 12);
+  static async hashPassword(instance: User) {
+    if (instance.changed('password')) {
+      const salt = await bcrypt.genSalt(12);
+      instance.password = await bcrypt.hash(instance.password, salt);
     }
   }
 
-  // **Add the validatePassword method here**
   async validatePassword(password: string): Promise<boolean> {
     return bcrypt.compare(password, this.password);
   }
 }
-
-export default User;

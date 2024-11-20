@@ -1,44 +1,49 @@
-// src/controllers/authController.ts
 import { Request, Response } from 'express';
 import { User, UserCreationAttributes } from '../models/User';
-import jwt from 'jsonwebtoken';
+import { Role } from '../models/Role';
 import { validationResult } from 'express-validator';
-import transporter from '../config/emailConfig';
+import jwt from 'jsonwebtoken';
+import speakeasy from 'speakeasy';
+import QRCode from 'qrcode';
 import crypto from 'crypto';
+import dotenv from 'dotenv';
 import VerificationToken from '../models/VerificationToken';
-import { Op } from 'sequelize';
-import { Role } from '../models/Role'; // Updated import
 import InvitationToken from '../models/InvitationToken';
+import transporter from '../config/emailConfig';
+import { Op } from 'sequelize';
 
+dotenv.config();
 
+// Register function with email verification token creation
 export const register = async (req: Request, res: Response) => {
-  const errors = validationResult(req);
-  if (!errors.isEmpty()) {
-    return res.status(400).json({ errors: errors.array() });
-  }
-
   const { email, password } = req.body;
 
   try {
-    // Check if the user already exists
+    // Validate input
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ errors: errors.array() });
+    }
+
+    // Check if user already exists
     const existingUser = await User.findOne({ where: { email } });
     if (existingUser) {
-      return res.status(400).json({ message: 'Email already registered' });
+      return res.status(409).json({ message: 'Email already in use' });
     }
 
     // Get the Student role
-    const studentRole = await Role.findOne({ where: { name: 'Student' } });
-    if (!studentRole) {
-      return res.status(500).json({ message: 'Student role not found' });
+    const role = await Role.findOne({ where: { name: 'Student' } });
+    if (!role) {
+      return res.status(500).json({ message: 'Role not found' });
     }
 
-    // Create a new user with the Student role
+    // Create new user
     const user = await User.create({
       email,
       password,
-      roleId: studentRole.id,
+      roleId: role.id,
       isVerified: false,
-    } as UserCreationAttributes);
+    });
 
     // Generate and save a verification token
     const verificationToken = crypto.randomBytes(32).toString('hex');
@@ -66,24 +71,41 @@ export const register = async (req: Request, res: Response) => {
 };
 
 export const login = async (req: Request, res: Response) => {
-  const { email, password } = req.body;
+  const { email, password, token: mfaToken } = req.body;
 
   try {
-    // Explicitly type user as User | null
-    const user: User | null = await User.findOne({ where: { email } });
-    if (!user) {
-      return res.status(400).json({ message: 'Invalid email or password' });
+    // Validate input
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ errors: errors.array() });
     }
 
-    // Check if the user is verified
+    // Retrieve the user
+    const user = await User.findOne({ where: { email } });
+
+    if (!user || !(await user.validatePassword(password))) {
+      return res.status(401).json({ message: 'Invalid email or password' });
+    }
+
     if (!user.isVerified) {
-      return res.status(400).json({ message: 'Please verify your email before logging in.' });
+      return res.status(403).json({ message: 'Please verify your email before logging in' });
     }
 
-    // Use the validatePassword method from the User model
-    const isPasswordValid = await user.validatePassword(password);
-    if (!isPasswordValid) {
-      return res.status(400).json({ message: 'Invalid email or password' });
+    // If MFA is enabled
+    if (user.mfaEnabled) {
+      if (!mfaToken) {
+        return res.status(400).json({ message: 'MFA token is required' });
+      }
+
+      const mfaVerified = speakeasy.totp.verify({
+        secret: user.mfaSecret!,
+        encoding: 'base32',
+        token: mfaToken,
+      });
+
+      if (!mfaVerified) {
+        return res.status(400).json({ message: 'Invalid MFA token' });
+      }
     }
 
     // Generate JWT token
@@ -95,10 +117,95 @@ export const login = async (req: Request, res: Response) => {
 
     return res.status(200).json({ message: 'Login successful', token });
   } catch (error) {
-    return res.status(500).json({ message: 'Error logging in', error });
+    return res.status(500).json({ message: 'An unexpected error occurred during login.' });
   }
 };
 
+export const setupMFA = async (req: Request, res: Response) => {
+  const userId = req.user?.userId;
+
+  try {
+    if (!userId) {
+      return res.status(401).json({ message: 'Unauthorized' });
+    }
+
+    // Retrieve the user
+    const user = await User.findByPk(userId);
+
+    if (!user) {
+      return res.status(400).json({ message: 'User not found' });
+    }
+
+    // Generate MFA secret
+    const secret = speakeasy.generateSecret({
+      name: `Diploma Verification (${user.email})`,
+    });
+
+    // Temporarily store the secret in the database
+    user.mfaTempSecret = secret.base32;
+    await user.save();
+
+    // Generate QR code
+    const otpAuthURL = secret.otpauth_url;
+
+    if (!otpAuthURL) {
+      return res.status(500).json({ message: 'Error generating OTP Auth URL' });
+    }
+
+    // Generate QR code image URL
+    const qrCodeDataURL = await QRCode.toDataURL(otpAuthURL);
+
+    // Send the QR code to the client
+    return res.status(200).json({
+      message: 'MFA setup initiated',
+      qrCodeDataURL,
+    });
+  } catch (error) {
+    return res.status(500).json({ message: 'Error setting up MFA', error });
+  }
+};
+
+export const verifyMFASetup = async (req: Request, res: Response) => {
+  const userId = req.user?.userId;
+  const { token } = req.body;
+
+  try {
+    if (!userId) {
+      return res.status(401).json({ message: 'Unauthorized' });
+    }
+
+    // Retrieve the user
+    const user = await User.findByPk(userId);
+
+    if (!user || !user.mfaTempSecret) {
+      return res.status(400).json({ message: 'MFA setup not initiated' });
+    }
+
+    // Verify the token
+    const verified = speakeasy.totp.verify({
+      secret: user.mfaTempSecret,
+      encoding: 'base32',
+      token,
+    });
+
+    if (verified) {
+      // Save the MFA secret
+      user.mfaSecret = user.mfaTempSecret;
+      user.mfaEnabled = true;
+      user.mfaTempSecret = null; // Clear the temp secret
+
+      await user.save();
+
+      return res.status(200).json({
+        message: 'MFA setup complete',
+      });
+    } else {
+      return res.status(400).json({ message: 'Invalid MFA token' });
+    }
+  } catch (error) {
+    return res.status(500).json({ message: 'Error verifying MFA setup', error });
+  }
+};
 
 export const confirmEmail = async (req: Request, res: Response) => {
   const { token } = req.query;
