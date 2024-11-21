@@ -3,7 +3,7 @@ import express from 'express';
 import { body } from 'express-validator';
 import {
   registerUniversity,
-  inviteUniversityAdmin,
+  inviteUniversityAdmin, getVerifiedUniversities,
 } from '../controllers/universityController';
 import { authenticateJWT } from '../middlewares/authMiddleware';
 import { authorizeRoles } from '../middlewares/roleMiddleware';
@@ -18,11 +18,17 @@ router.post(
   authorizeRoles(['PlatformAdmin']),
   [
     body('name').notEmpty().trim().escape().withMessage('University name is required'),
-    body('domain').isURL().withMessage('Enter a valid domain URL'),
+    body('domain')
+      .matches(/^@([a-zA-Z0-9.-]+\.[a-zA-Z]{2,})$/)
+      .withMessage('Enter a valid domain starting with "@" (e.g., @example.com)'),
     body('accreditationDetails').optional().trim().escape(),
   ],
   asyncHandler(registerUniversity)
 );
+
+
+// Get Verified Universities (Public Endpoint)
+router.get('/verified', asyncHandler(getVerifiedUniversities));
 
 // Invite University Admin Route (Only PlatformAdmins)
 router.post(
