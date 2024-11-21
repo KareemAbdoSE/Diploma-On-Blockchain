@@ -11,12 +11,13 @@ import VerificationToken from '../models/VerificationToken';
 import InvitationToken from '../models/InvitationToken';
 import transporter from '../config/emailConfig';
 import { Op } from 'sequelize';
+import University from '../models/University';
 
 dotenv.config();
 
 // Register function with email verification token creation
 export const register = async (req: Request, res: Response) => {
-  const { email, password } = req.body;
+  const { email, password, universityId } = req.body;
 
   try {
     // Validate input
@@ -31,6 +32,21 @@ export const register = async (req: Request, res: Response) => {
       return res.status(409).json({ message: 'Email already in use' });
     }
 
+    // Check if university exists and is verified
+    const university = await University.findOne({ where: { id: universityId, isVerified: true } });
+    if (!university) {
+      return res.status(400).json({ message: 'Invalid or unverified university' });
+    }
+
+    // Check if email domain matches university domain
+    // Extract '@' and what's after it from the student's email
+    const emailDomain = email.substring(email.indexOf('@')).toLowerCase(); // Includes '@'
+    const universityDomain = university.domain.toLowerCase(); // Already includes '@'
+
+    if (emailDomain !== universityDomain) {
+      return res.status(400).json({ message: 'Email domain does not match university domain' });
+    }
+
     // Get the Student role
     const role = await Role.findOne({ where: { name: 'Student' } });
     if (!role) {
@@ -43,7 +59,8 @@ export const register = async (req: Request, res: Response) => {
       password,
       roleId: role.id,
       isVerified: false,
-    });
+      universityId: university.id,
+    } as UserCreationAttributes);
 
     // Generate and save a verification token
     const verificationToken = crypto.randomBytes(32).toString('hex');

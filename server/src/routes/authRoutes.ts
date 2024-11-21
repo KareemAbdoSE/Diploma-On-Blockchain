@@ -7,6 +7,11 @@ import {
   confirmEmail,
   registerUniversityAdmin,
 } from '../controllers/authController';
+import {
+  registerUniversity,
+  inviteUniversityAdmin,
+  getVerifiedUniversities,
+} from '../controllers/universityController';
 import { body } from 'express-validator';
 import asyncHandler from '../utils/asyncHandler';
 import { authenticateJWT } from '../middlewares/authMiddleware';
@@ -18,7 +23,12 @@ router.post(
   '/register',
   [
     body('email').isEmail().withMessage('Enter a valid email'),
-    body('password').isLength({ min: 8 }).withMessage('Password must be at least 8 characters long'),
+    body('password')
+      .isLength({ min: 8 })
+      .withMessage('Password must be at least 8 characters long'),
+    body('universityId')
+      .isInt()
+      .withMessage('University ID is required and must be an integer'),
   ],
   asyncHandler(register)
 );

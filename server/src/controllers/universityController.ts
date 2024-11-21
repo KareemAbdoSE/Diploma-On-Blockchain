@@ -79,3 +79,16 @@ export const inviteUniversityAdmin = async (req: Request, res: Response) => {
     return res.status(500).json({ message: 'Error sending invitation', error });
   }
 };
+
+export const getVerifiedUniversities = async (req: Request, res: Response) => {
+  try {
+    const universities = await University.findAll({
+      where: { isVerified: true },
+      attributes: ['id', 'name', 'domain'],
+    });
+
+    return res.status(200).json({ universities });
+  } catch (error) {
+    return res.status(500).json({ message: 'Error fetching universities', error });
+  }
+};
