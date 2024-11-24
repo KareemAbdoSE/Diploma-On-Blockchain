@@ -2,25 +2,16 @@
 import { useEffect, useState } from 'react';
 import Web3Modal from 'web3modal';
 import { ethers } from 'ethers';
-import WalletConnectProvider from '@walletconnect/web3-provider';
 
-const providerOptions = {
-  walletconnect: {
-    package: WalletConnectProvider,
-    options: {
-      // Replace with your own Infura Project ID
-      infuraId: process.env.REACT_APP_INFURA_ID,
-    },
-  },
-  // You can add more providers here if needed
-};
+// No need to import WalletConnectProvider
 
+// Initialize Web3Modal without providerOptions
 let web3Modal: Web3Modal | null = null;
 
 if (typeof window !== 'undefined') {
   web3Modal = new Web3Modal({
     cacheProvider: true, // Optional
-    providerOptions, // Required
+    // No providerOptions needed for MetaMask only
   });
 }
 
@@ -41,9 +32,11 @@ export const useWallet = () => {
       const library = new ethers.providers.Web3Provider(provider);
       const accounts = await library.listAccounts();
       const network = await library.getNetwork();
+
       if (accounts.length > 0) {
         setAccount(accounts[0]);
       }
+
       setRawProvider(provider);
       setLibrary(library);
       setChainId(network.chainId);
@@ -61,14 +54,9 @@ export const useWallet = () => {
       });
 
       // Subscribe to chainId change
-      provider.on('chainChanged', (chainId: number) => {
-        setChainId(chainId);
+      provider.on('chainChanged', (chainId: string) => {
+        setChainId(Number(chainId));
         window.location.reload();
-      });
-
-      // Subscribe to provider connection
-      provider.on('connect', (info: { chainId: number }) => {
-        console.log('Connected to chainId:', info.chainId);
       });
 
       // Subscribe to provider disconnection
@@ -83,9 +71,7 @@ export const useWallet = () => {
   };
 
   const disconnectWallet = async () => {
-    if (rawProvider && rawProvider.disconnect && typeof rawProvider.disconnect === 'function') {
-      await rawProvider.disconnect();
-    }
+    // MetaMask does not support programmatic disconnection
     if (web3Modal) {
       await web3Modal.clearCachedProvider();
     }
@@ -95,11 +81,13 @@ export const useWallet = () => {
     setConnected(false);
   };
 
-  // Optionally, automatically connect if a provider is cached
+  // Automatically connect if a provider is cached
   useEffect(() => {
     if (web3Modal && web3Modal.cachedProvider) {
       connectWallet();
     }
+    // Cleanup function
+    return () => {};
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
