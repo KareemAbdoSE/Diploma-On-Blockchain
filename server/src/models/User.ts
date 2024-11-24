@@ -18,6 +18,7 @@ export interface UserCreationAttributes {
   roleId: number;
   isVerified?: boolean;
   universityId?: number;
+  walletAddress?: string | null;
 }
 
 @Table({
@@ -116,6 +117,15 @@ export class User extends Model<User, UserCreationAttributes> {
     },
   })
   mfaTempSecret!: string | null;
+
+  @Column({
+    type: DataType.STRING,
+    allowNull: true,
+    validate: {
+      is: /^0x[a-fA-F0-9]{40}$/, // Ethereum address validation
+    },
+  })
+  walletAddress!: string | null;
 
   @BeforeSave
   static async hashPassword(instance: User) {
