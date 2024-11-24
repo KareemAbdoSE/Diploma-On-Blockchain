@@ -12,19 +12,30 @@ const CheckoutForm: React.FC = () => {
   const [paymentSuccess, setPaymentSuccess] = useState<boolean>(false);
 
   useEffect(() => {
-    console.log('API URL:', process.env.REACT_APP_API_URL);
+    const fetchClientSecret = async () => {
+      try {
+        const response = await fetch(`${process.env.REACT_APP_API_URL}/api/payment/create-payment-intent`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            // Include JWT token for authentication
+            'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          },
+        });
 
-    fetch(`${process.env.REACT_APP_API_URL}/api/payment/create-payment-intent`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        // Include JWT token for authentication
-        'Authorization': `Bearer ${localStorage.getItem('token')}`,
-      },
-    })
-      .then((res) => res.json())
-      .then((data) => setClientSecret(data.clientSecret))
-      .catch((error) => console.error('Error fetching client secret:', error));
+        if (!response.ok) {
+          throw new Error(`Server error: ${response.statusText}`);
+        }
+
+        const data = await response.json();
+        setClientSecret(data.clientSecret);
+      } catch (error) {
+        console.error('Error fetching client secret:', error);
+        setPaymentError('Failed to initialize payment. Please try again.');
+      }
+    };
+
+    fetchClientSecret();
   }, []);
 
   const handleSubmit = async (event: React.FormEvent) => {
