@@ -8,6 +8,7 @@ import logger from './logger';
 import { sequelize } from './database';
 import authRoutes from './routes/authRoutes';
 import universityRoutes from './routes/universityRoutes';
+import userRoutes from './routes/userRoutes';
 
 dotenv.config();
 
@@ -29,6 +30,7 @@ app.use(limiter);
 // Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/universities', universityRoutes);
+app.use('/api/user', userRoutes);
 
 // Health Check Endpoint
 app.get('/api/health', async (req, res) => {
