@@ -9,16 +9,20 @@ import { sequelize } from './database';
 import authRoutes from './routes/authRoutes';
 import universityRoutes from './routes/universityRoutes';
 import userRoutes from './routes/userRoutes';
+import paymentRoutes from './routes/paymentRoutes';
 
 dotenv.config();
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 5002;
 
 // Security Middleware
 app.use(helmet());
-app.use(cors());
+app.use(cors({
+  origin: ['http://localhost:3000'], // Allow requests from your frontend
+}));
 app.use(express.json());
+app.use('/api/payment', paymentRoutes);
 
 // Rate Limiting
 const limiter = rateLimit({

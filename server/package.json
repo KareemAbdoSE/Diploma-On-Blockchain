@@ -59,6 +59,7 @@
     "sequelize-cli": "^6.6.2",
     "sequelize-typescript": "^2.1.6",
     "speakeasy": "^2.0.0",
+    "stripe": "^17.4.0",
     "winston": "^3.17.0"
   }
 }
