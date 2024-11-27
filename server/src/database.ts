@@ -2,13 +2,17 @@
 import { Sequelize } from 'sequelize-typescript';
 import dotenv from 'dotenv';
 
+
 import { User } from './models/User';
 import { Role } from './models/Role';
 import { University } from './models/University';
-import { VerificationToken } from './models/VerificationToken'; // Import VerificationToken model
+import { VerificationToken } from './models/VerificationToken';
 import { InvitationToken } from './models/InvitationToken';
+import { Degree } from './models/Degree';
+
 
 dotenv.config(); // Load environment variables
+
 
 // Initialize Sequelize with database configurations
 export const sequelize = new Sequelize({
@@ -18,6 +22,6 @@ export const sequelize = new Sequelize({
   username: process.env.DB_USER || 'kareemabdoser',
   password: process.env.DB_PASSWORD || 'Kabdo-2001',
   database: process.env.DB_NAME || 'diploma-blockchain',
-  models: [User, Role, University, VerificationToken, InvitationToken], // Register all models, including VerificationToken
+  models: [User, Role, University, VerificationToken, InvitationToken, Degree], // Register all models, including VerificationToken
   logging: false,
 });
