@@ -3,11 +3,14 @@ const webpack = require('webpack');
 
 module.exports = {
   webpack: {
-    alias: {},
+    alias: {
+      // Alias 'process/browser' to 'process'
+      'process/browser': 'process',
+    },
     plugins: {
       add: [
         new webpack.ProvidePlugin({
-          process: 'process/browser',
+          process: 'process',
           Buffer: ['buffer', 'Buffer'],
         }),
       ],
@@ -25,6 +28,7 @@ module.exports = {
         url: require.resolve('url'),
         util: require.resolve('util'),
         path: require.resolve('path-browserify'),
+        process: require.resolve('process'),
       };
       return webpackConfig;
     },
