@@ -8,19 +8,19 @@ import { useFormik } from 'formik';
 import * as yup from 'yup';
 
 interface FormValues {
-  userId: string;
   degreeType: string;
   major: string;
   graduationDate: string;
+  studentEmail: string;
   degreeFile: File | null;
 }
 
 const validationSchema = yup.object({
-  userId: yup.number().required('Student User ID is required').integer('User ID must be an integer'),
   degreeType: yup.string().required('Degree Type is required'),
   major: yup.string().required('Major is required'),
   graduationDate: yup.date().required('Graduation Date is required'),
-  degreeFile: yup.mixed().required('Degree file is required'),
+  studentEmail: yup.string().email('Enter a valid email').required('Student Email is required'),
+  degreeFile: yup.mixed(),
 });
 
 const UploadDegreePage: React.FC = () => {
@@ -30,10 +30,10 @@ const UploadDegreePage: React.FC = () => {
 
   const formik = useFormik<FormValues>({
     initialValues: {
-      userId: '',
       degreeType: '',
       major: '',
       graduationDate: '',
+      studentEmail: '',
       degreeFile: null,
     },
     validationSchema: validationSchema,
@@ -43,10 +43,10 @@ const UploadDegreePage: React.FC = () => {
       try {
         const token = localStorage.getItem('token');
         const formData = new FormData();
-        formData.append('userId', values.userId);
         formData.append('degreeType', values.degreeType);
         formData.append('major', values.major);
         formData.append('graduationDate', values.graduationDate);
+        formData.append('studentEmail', values.studentEmail);
         if (values.degreeFile) {
           formData.append('degreeFile', values.degreeFile);
         }
@@ -74,18 +74,6 @@ const UploadDegreePage: React.FC = () => {
         {error && <Alert severity="error">{error}</Alert>}
         {success && <Alert severity="success">{success}</Alert>}
         <form onSubmit={formik.handleSubmit}>
-          <TextField
-            fullWidth
-            margin="normal"
-            id="userId"
-            name="userId"
-            label="Student User ID"
-            variant="outlined"
-            value={formik.values.userId}
-            onChange={formik.handleChange}
-            error={formik.touched.userId && !!formik.errors.userId}
-            helperText={formik.touched.userId ? formik.errors.userId : ''}
-          />
           <TextField
             fullWidth
             margin="normal"
@@ -126,6 +114,18 @@ const UploadDegreePage: React.FC = () => {
             error={formik.touched.graduationDate && !!formik.errors.graduationDate}
             helperText={formik.touched.graduationDate ? formik.errors.graduationDate : ''}
           />
+          <TextField
+            fullWidth
+            margin="normal"
+            id="studentEmail"
+            name="studentEmail"
+            label="Student Email"
+            variant="outlined"
+            value={formik.values.studentEmail}
+            onChange={formik.handleChange}
+            error={formik.touched.studentEmail && !!formik.errors.studentEmail}
+            helperText={formik.touched.studentEmail ? formik.errors.studentEmail : ''}
+          />
           <input
             id="degreeFile"
             name="degreeFile"
@@ -148,3 +148,4 @@ const UploadDegreePage: React.FC = () => {
 };
 
 export default UploadDegreePage;
+

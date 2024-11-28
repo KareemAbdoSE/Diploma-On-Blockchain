@@ -9,6 +9,7 @@ import * as yup from 'yup';
 const validationSchema = yup.object({
   email: yup.string().email('Enter a valid email').required('Email is required'),
   password: yup.string().required('Password is required'),
+  mfaToken: yup.string(),
 });
 
 const LoginPage: React.FC = () => {
@@ -19,14 +20,15 @@ const LoginPage: React.FC = () => {
     initialValues: {
       email: '',
       password: '',
+      mfaToken: '',
     },
     validationSchema: validationSchema,
     onSubmit: async (values) => {
       setError(null);
       try {
-        await login(values.email, values.password);
+        await login(values.email, values.password, values.mfaToken || undefined);
       } catch (error: any) {
-        setError(error);
+        setError(error.message || 'Login failed');
       }
     },
   });
@@ -35,7 +37,7 @@ const LoginPage: React.FC = () => {
     <Container maxWidth="sm">
       <Box sx={{ mt: 8 }}>
         <Typography variant="h4" gutterBottom>
-          University Admin Login
+          Login
         </Typography>
         {error && <Alert severity="error">{error}</Alert>}
         <form onSubmit={formik.handleSubmit}>
@@ -64,6 +66,18 @@ const LoginPage: React.FC = () => {
             error={formik.touched.password && !!formik.errors.password}
             helperText={formik.touched.password ? formik.errors.password : ''}
           />
+          <TextField
+            fullWidth
+            margin="normal"
+            id="mfaToken"
+            name="mfaToken"
+            label="MFA Code (Optional)"
+            variant="outlined"
+            value={formik.values.mfaToken}
+            onChange={formik.handleChange}
+            error={formik.touched.mfaToken && !!formik.errors.mfaToken}
+            helperText={formik.touched.mfaToken ? formik.errors.mfaToken : ''}
+          />
           <Button color="primary" variant="contained" fullWidth type="submit" sx={{ mt: 2 }}>
             Login
           </Button>
@@ -74,3 +88,5 @@ const LoginPage: React.FC = () => {
 };
 
 export default LoginPage;
+
+

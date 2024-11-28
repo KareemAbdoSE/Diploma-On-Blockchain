@@ -1,20 +1,21 @@
 // src/pages/DegreesPage.tsx
 
 import React, { useEffect, useState } from 'react';
-import { Typography, Table, TableHead, TableRow, TableCell, TableBody, Button, Alert } from '@mui/material';
+import { Typography, Table, TableHead, TableRow, TableCell, TableBody, Button, Alert, Checkbox } from '@mui/material';
 import axios from 'axios';
 import { useAuth } from '../hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
 
 interface Degree {
   id: number;
-  userId: number;
+  userId: number | null;
   universityId: number;
   degreeType: string;
   major: string;
   graduationDate: string;
   status: string;
-  user: {
+  studentEmail: string;
+  user?: {
     id: number;
     email: string;
   };
@@ -22,6 +23,7 @@ interface Degree {
 
 const DegreesPage: React.FC = () => {
   const [degrees, setDegrees] = useState<Degree[]>([]);
+  const [selectedDegrees, setSelectedDegrees] = useState<number[]>([]);
   const [error, setError] = useState<string | null>(null);
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -64,15 +66,21 @@ const DegreesPage: React.FC = () => {
     }
   };
 
-  // ... inside DegreesPage component
+  const handleSelectDegree = (degreeId: number) => {
+    if (selectedDegrees.includes(degreeId)) {
+      setSelectedDegrees(selectedDegrees.filter((id) => id !== degreeId));
+    } else {
+      setSelectedDegrees([...selectedDegrees, degreeId]);
+    }
+  };
 
-  const handleConfirm = async (degreeIds: number[], confirmationStep: number) => {
+  const handleConfirmDegrees = async (confirmationStep: number) => {
     try {
       const token = localStorage.getItem('token');
       await axios.post(
         `${process.env.REACT_APP_API_URL}/api/degrees/confirm`,
         {
-          degreeIds,
+          degreeIds: selectedDegrees,
           confirmationStep,
         },
         {
@@ -81,19 +89,14 @@ const DegreesPage: React.FC = () => {
           },
         }
       );
-      // Update degrees status in state
-      // Fetch degrees again or update the specific degrees
-      const updatedDegrees = degrees.map((degree) => {
-        if (degreeIds.includes(degree.id)) {
-          if (confirmationStep === 1) {
-            return { ...degree, status: 'pending_confirmation' };
-          } else if (confirmationStep === 2) {
-            return { ...degree, status: 'confirmed' };
-          }
-        }
-        return degree;
+      // Refresh degrees list
+      const response = await axios.get(`${process.env.REACT_APP_API_URL}/api/degrees`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
       });
-      setDegrees(updatedDegrees);
+      setDegrees(response.data.degrees);
+      setSelectedDegrees([]);
     } catch (error: any) {
       setError(error.response?.data?.message || 'Failed to confirm degrees');
     }
@@ -105,9 +108,20 @@ const DegreesPage: React.FC = () => {
         Degrees
       </Typography>
       {error && <Alert severity="error">{error}</Alert>}
+      {selectedDegrees.length > 0 && (
+        <div>
+          <Button variant="contained" color="primary" onClick={() => handleConfirmDegrees(1)} sx={{ mr: 1 }}>
+            Confirm Step 1
+          </Button>
+          <Button variant="contained" color="secondary" onClick={() => handleConfirmDegrees(2)}>
+            Confirm Step 2
+          </Button>
+        </div>
+      )}
       <Table>
         <TableHead>
           <TableRow>
+            <TableCell>Select</TableCell>
             <TableCell>ID</TableCell>
             <TableCell>Student Email</TableCell>
             <TableCell>Degree Type</TableCell>
@@ -120,8 +134,16 @@ const DegreesPage: React.FC = () => {
         <TableBody>
           {degrees.map((degree) => (
             <TableRow key={degree.id}>
+              <TableCell>
+                {degree.status === 'draft' || degree.status === 'pending_confirmation' ? (
+                  <Checkbox
+                    checked={selectedDegrees.includes(degree.id)}
+                    onChange={() => handleSelectDegree(degree.id)}
+                  />
+                ) : null}
+              </TableCell>
               <TableCell>{degree.id}</TableCell>
-              <TableCell>{degree.user.email}</TableCell>
+              <TableCell>{degree.studentEmail}</TableCell>
               <TableCell>{degree.degreeType}</TableCell>
               <TableCell>{degree.major}</TableCell>
               <TableCell>{new Date(degree.graduationDate).toLocaleDateString()}</TableCell>
@@ -135,21 +157,10 @@ const DegreesPage: React.FC = () => {
                     <Button size="small" color="error" onClick={() => handleDelete(degree.id)}>
                       Delete
                     </Button>
-                    <Button size="small" onClick={() => handleConfirm([degree.id], 1)}>
-                      Confirm Step 1
-                    </Button>
                   </>
                 )}
-                {degree.status === 'pending_confirmation' && (
-                  <>
-                    <Button size="small" onClick={() => handleConfirm([degree.id], 2)}>
-                      Confirm Step 2
-                    </Button>
-                  </>
-                )}
-                {degree.status === 'confirmed' && (
-                  <Typography variant="body2">Confirmed</Typography>
-                )}
+                {degree.status === 'submitted' && <Typography variant="body2">Submitted</Typography>}
+                {degree.status === 'linked' && <Typography variant="body2">Linked to Student</Typography>}
                 {/* Add additional status handling if needed */}
               </TableCell>
             </TableRow>
