@@ -8,6 +8,8 @@ import ProtectedRoute from './components/ProtectedRoute';
 import DegreesPage from './pages/DegreesPage';
 import UploadDegreePage from './pages/UploadDegreePage';
 import EditDegreePage from './pages/EditDegreePage';
+import MyDegreePage from './pages/MyDegreePage';
+import BulkUploadPage from './pages/BulkUploadPage';
 import { useAuth } from './hooks/useAuth';
 
 const App: React.FC = () => {
@@ -15,26 +17,70 @@ const App: React.FC = () => {
 
   return (
     <Routes>
-      {/* Redirect root path based on authentication status */}
-      <Route
-        path="/"
-        element={
-          isAuthenticated ? <Navigate to="/dashboard" /> : <Navigate to="/login" />
-        }
-      />
       <Route path="/login" element={<LoginPage />} />
-      <Route element={<ProtectedRoute />}>
-        <Route element={<DashboardLayout />}>
-          <Route path="/dashboard" element={<DegreesPage />} />
-          <Route path="/upload-degree" element={<UploadDegreePage />} />
-          <Route path="/edit-degree/:id" element={<EditDegreePage />} />
-          {/* Add more routes as needed */}
-        </Route>
+      <Route path="/" element={<Navigate to="/dashboard" replace />} />
+
+      {/* Protected routes */}
+      <Route
+        path="/dashboard"
+        element={
+          <ProtectedRoute>
+            <DashboardLayout />
+          </ProtectedRoute>
+        }
+      >
+        {/* University Admin Routes */}
+        <Route
+          index
+          element={
+            <ProtectedRoute roles={['UniversityAdmin']}>
+              <DegreesPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="upload-degree"
+          element={
+            <ProtectedRoute roles={['UniversityAdmin']}>
+              <UploadDegreePage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="bulk-upload"
+          element={
+            <ProtectedRoute roles={['UniversityAdmin']}>
+              <BulkUploadPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="bulk-upload"
+          element={
+            <ProtectedRoute roles={['UniversityAdmin']}>
+              <BulkUploadPage />
+            </ProtectedRoute>
+          }
+        />
+        {/* Student Routes */}
+        <Route
+          path="my-degree"
+          element={
+            <ProtectedRoute roles={['Student']}>
+              <MyDegreePage />
+            </ProtectedRoute>
+          }
+        />
       </Route>
-      {/* Optional: Catch-all route to handle unmatched paths */}
-      <Route path="*" element={<Navigate to="/" />} />
+
+      {/* Unauthorized route */}
+      <Route path="/unauthorized" element={<div>Unauthorized Access</div>} />
+
+      {/* Catch-all route */}
+      <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
 };
 
 export default App;
+

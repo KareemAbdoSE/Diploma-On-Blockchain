@@ -6,7 +6,7 @@ import { AppBar, Toolbar, Typography, Button, Box } from '@mui/material';
 import { useAuth } from '../hooks/useAuth';
 
 const DashboardLayout: React.FC = () => {
-  const { logout } = useAuth();
+  const { logout, user } = useAuth();
   const navigate = useNavigate();
 
   const handleLogout = () => {
@@ -17,19 +17,43 @@ const DashboardLayout: React.FC = () => {
     navigate(path);
   };
 
+  const getTitle = () => {
+    if (user.role === 'UniversityAdmin') {
+      return 'University Admin Dashboard';
+    } else if (user.role === 'Student') {
+      return 'Student Dashboard';
+    } else {
+      return 'Dashboard';
+    }
+  };
+
   return (
     <div>
       <AppBar position="static">
         <Toolbar>
           <Typography variant="h6" sx={{ flexGrow: 1 }}>
-            University Admin Dashboard
+            {getTitle()}
           </Typography>
-          <Button color="inherit" onClick={() => handleNavigate('/dashboard')}>
-            Degrees
-          </Button>
-          <Button color="inherit" onClick={() => handleNavigate('/upload-degree')}>
-            Upload Degree
-          </Button>
+          {user.role === 'UniversityAdmin' && (
+            <>
+              <Button color="inherit" onClick={() => handleNavigate('/dashboard')}>
+                Degrees
+              </Button>
+              <Button color="inherit" onClick={() => handleNavigate('/dashboard/upload-degree')}>
+                Upload Degree
+              </Button>
+              <Button color="inherit" onClick={() => handleNavigate('/dashboard/bulk-upload')}>
+                Bulk Upload
+              </Button>
+            </>
+          )}
+          {user.role === 'Student' && (
+            <>
+              <Button color="inherit" onClick={() => handleNavigate('/dashboard/my-degree')}>
+                My Degree
+              </Button>
+            </>
+          )}
           <Button color="inherit" onClick={handleLogout}>
             Logout
           </Button>
