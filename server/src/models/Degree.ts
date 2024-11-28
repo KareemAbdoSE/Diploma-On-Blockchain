@@ -1,5 +1,3 @@
-// src/models/Degree.ts
-
 import {
   Table,
   Column,
@@ -14,30 +12,26 @@ import {
 import { User } from './User';
 import University from './University';
 
-
 export interface DegreeAttributes {
   id: number;
-  userId: number;
+  userId?: number | null; // Nullable until linked
   universityId: number;
   degreeType: string;
   major: string;
   graduationDate: Date;
-  status: string; // 'draft', 'pending_confirmation', 'confirmed'
-  filePath?: string; // Path to the uploaded degree file
+  studentEmail: string;
+  status: string; // 'draft', 'submitted', 'linked'
+  filePath?: string;
   createdAt?: Date;
   updatedAt?: Date;
 }
 
-
 export interface DegreeCreationAttributes
   extends Omit<DegreeAttributes, 'id' | 'createdAt' | 'updatedAt'> {}
-
 
 @DefaultScope(() => ({
   attributes: { exclude: ['filePath'] }, // Exclude filePath by default
 }))
-
-
 @Table({
   tableName: 'degrees',
   timestamps: true,
@@ -46,14 +40,13 @@ export class Degree extends Model<DegreeAttributes, DegreeCreationAttributes> {
   @ForeignKey(() => User)
   @Column({
     type: DataType.INTEGER,
-    allowNull: false,
+    allowNull: true,
+    defaultValue: null,
   })
-  userId!: number;
-
+  userId!: number | null;
 
   @BelongsTo(() => User)
   user!: User;
-
 
   @ForeignKey(() => University)
   @Column({
@@ -62,10 +55,8 @@ export class Degree extends Model<DegreeAttributes, DegreeCreationAttributes> {
   })
   universityId!: number;
 
-
   @BelongsTo(() => University)
   university!: University;
-
 
   @Column({
     type: DataType.STRING,
@@ -73,13 +64,11 @@ export class Degree extends Model<DegreeAttributes, DegreeCreationAttributes> {
   })
   degreeType!: string;
 
-
   @Column({
     type: DataType.STRING,
     allowNull: false,
   })
   major!: string;
-
 
   @Column({
     type: DataType.DATE,
@@ -87,14 +76,18 @@ export class Degree extends Model<DegreeAttributes, DegreeCreationAttributes> {
   })
   graduationDate!: Date;
 
+  @Column({
+    type: DataType.STRING,
+    allowNull: false,
+  })
+  studentEmail!: string;
 
   @Column({
     type: DataType.STRING,
     allowNull: false,
     defaultValue: 'draft',
   })
-  status!: string;
-
+  status!: string; // 'draft', 'submitted', 'linked'
 
   @Column({
     type: DataType.STRING,
@@ -102,14 +95,11 @@ export class Degree extends Model<DegreeAttributes, DegreeCreationAttributes> {
   })
   filePath?: string;
 
-
   @CreatedAt
   createdAt!: Date;
-
 
   @UpdatedAt
   updatedAt!: Date;
 }
-
 
 export default Degree;

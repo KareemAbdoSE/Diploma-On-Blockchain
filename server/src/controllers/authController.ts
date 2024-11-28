@@ -12,6 +12,8 @@ import InvitationToken from '../models/InvitationToken';
 import transporter from '../config/emailConfig';
 import { Op } from 'sequelize';
 import University from '../models/University';
+import { Degree } from '../models/Degree';
+
 
 dotenv.config();
 
@@ -78,6 +80,28 @@ export const register = async (req: Request, res: Response) => {
       html: `<p>Please verify your email by clicking on the following link: <a href="${verificationUrl}">${verificationUrl}</a></p>`,
     });
 
+    // Attempt to link degree
+    const degree = await Degree.findOne({
+      where: {
+        studentEmail: email.toLowerCase(),
+        status: 'submitted',
+        userId: null,
+      },
+    });
+
+    if (degree) {
+      degree.userId = user.id;
+      degree.status = 'linked';
+      await degree.save();
+
+      // Send notification email to the student
+      await transporter.sendMail({
+        to: email,
+        subject: 'Degree Linked to Your Account',
+        html: `<p>Hi,<br>Your degree in ${degree.major} has been successfully linked to your account. You can now view it in your dashboard.</p>`,
+      });
+    }
+
     return res.status(201).json({
       message: 'User registered successfully. Please verify your email to complete registration.',
       userId: user.id,
@@ -88,7 +112,7 @@ export const register = async (req: Request, res: Response) => {
 };
 
 export const login = async (req: Request, res: Response) => {
-  const { email, password, token: mfaToken } = req.body;
+  const { email, password, mfaToken } = req.body;
 
   try {
     // Validate input
@@ -98,7 +122,10 @@ export const login = async (req: Request, res: Response) => {
     }
 
     // Retrieve the user
-    const user = await User.findOne({ where: { email } });
+    const user = await User.findOne({
+      where: { email },
+      include: [Role],
+    });
 
     if (!user || !(await user.validatePassword(password))) {
       return res.status(401).json({ message: 'Invalid email or password' });
@@ -108,8 +135,8 @@ export const login = async (req: Request, res: Response) => {
       return res.status(403).json({ message: 'Please verify your email before logging in' });
     }
 
-    // If MFA is enabled
-    if (user.mfaEnabled) {
+    // Check if user is a UniversityAdmin and MFA is enabled
+    if (user.role.name === 'UniversityAdmin' && user.mfaEnabled) {
       if (!mfaToken) {
         return res.status(400).json({ message: 'MFA token is required' });
       }
