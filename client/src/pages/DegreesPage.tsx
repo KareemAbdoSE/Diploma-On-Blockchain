@@ -65,7 +65,7 @@ const DegreesPage: React.FC = () => {
   }, []);
 
   const handleEdit = (degreeId: number) => {
-    navigate(`/dashboard/edit-degree/${degreeId}`);
+    navigate('/dashboard/edit-degrees', { state: { degreeIds: [degreeId] } });
   };
 
   const handleEditSelectedDegrees = () => {
@@ -74,8 +74,8 @@ const DegreesPage: React.FC = () => {
 
   const handleDelete = async (degreeId: number) => {
     try {
-      const confirm = window.confirm('Are you sure you want to delete this degree?');
-      if (!confirm) return;
+      const confirmDelete = window.confirm('Are you sure you want to delete this degree?');
+      if (!confirmDelete) return;
 
       const token = localStorage.getItem('token');
       await axios.delete(`${process.env.REACT_APP_API_URL}/api/degrees/${degreeId}`, {
@@ -84,6 +84,7 @@ const DegreesPage: React.FC = () => {
         },
       });
       setDegrees(degrees.filter((degree) => degree.id !== degreeId));
+      setSelectedDegrees(selectedDegrees.filter((id) => id !== degreeId));
     } catch (error: any) {
       setError(error.response?.data?.message || 'Failed to delete degree');
     }
@@ -214,10 +215,10 @@ const DegreesPage: React.FC = () => {
               <TableCell>{degree.studentEmail}</TableCell>
               <TableCell>{degree.degreeType}</TableCell>
               <TableCell>{degree.major}</TableCell>
-              <TableCell>{new Date(degree.graduationDate).toLocaleDateString()}</TableCell>
+              <TableCell>{degree.graduationDate.split('T')[0]}</TableCell>
               <TableCell>{degree.status}</TableCell>
               <TableCell>
-                {degree.status === 'draft' && (
+                {(degree.status === 'draft' || degree.status === 'pending_confirmation') && (
                   <>
                     <Button size="small" onClick={() => handleEdit(degree.id)}>
                       Edit
@@ -229,7 +230,7 @@ const DegreesPage: React.FC = () => {
                 )}
                 {degree.status === 'submitted' && <Typography variant="body2">Submitted</Typography>}
                 {degree.status === 'linked' && <Typography variant="body2">Linked to Student</Typography>}
-                {/* Add additional status handling if needed */}
+                {/* Handle other statuses if needed */}
               </TableCell>
             </TableRow>
           ))}
