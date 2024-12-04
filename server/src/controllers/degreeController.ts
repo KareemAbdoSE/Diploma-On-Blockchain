@@ -10,6 +10,7 @@ import csv from 'csv-parser';
 import stream from 'stream';
 import transporter from '../config/emailConfig';
 
+
 // Upload Degree (Single Entry)
 export const uploadDegree = async (req: Request, res: Response) => {
   // Validate input
@@ -22,8 +23,10 @@ export const uploadDegree = async (req: Request, res: Response) => {
     return res.status(400).json({ errors: errors.array() });
   }
 
+
   const { degreeType, major, graduationDate, studentEmail } = req.body;
   const universityAdminId = req.user?.userId;
+
 
   try {
     if (!universityAdminId) {
@@ -34,10 +37,12 @@ export const uploadDegree = async (req: Request, res: Response) => {
       return res.status(401).json({ message: 'Unauthorized' });
     }
 
+
     // Get university admin's university
     const universityAdmin = await User.findByPk(universityAdminId, {
       include: [University],
     });
+
 
     if (!universityAdmin || !universityAdmin.universityId) {
       // If there was a file uploaded, delete it
@@ -47,11 +52,14 @@ export const uploadDegree = async (req: Request, res: Response) => {
       return res.status(400).json({ message: 'University admin not associated with a university' });
     }
 
+
     const universityId = universityAdmin.universityId;
+
 
     // Check that the student email matches the university domain
     const emailDomain = studentEmail.substring(studentEmail.indexOf('@')).toLowerCase(); // Includes '@'
     const universityDomain = universityAdmin.university!.domain.toLowerCase(); // Already includes '@'
+
 
     if (emailDomain !== universityDomain) {
       // If there was a file uploaded, delete it
@@ -60,6 +68,7 @@ export const uploadDegree = async (req: Request, res: Response) => {
       }
       return res.status(400).json({ message: 'Student email domain does not match university domain' });
     }
+
 
     // Create new Degree with status 'draft'
     const degree = await Degree.create({
@@ -72,6 +81,7 @@ export const uploadDegree = async (req: Request, res: Response) => {
       filePath: req.file?.path, // Use optional chaining
     } as DegreeCreationAttributes);
 
+
     return res.status(201).json({ message: 'Degree uploaded successfully', degree });
   } catch (error) {
     // If there was a file uploaded, delete it
@@ -83,19 +93,23 @@ export const uploadDegree = async (req: Request, res: Response) => {
   }
 };
 
+
 // Bulk Upload Degrees
 export const bulkUploadDegrees = async (req: Request, res: Response) => {
   const universityAdminId = req.user?.userId;
+
 
   try {
     if (!universityAdminId) {
       return res.status(401).json({ message: 'Unauthorized' });
     }
 
+
     // Get university admin's university
     const universityAdmin = await User.findByPk(universityAdminId, {
       include: [University],
     });
+
 
     if (!universityAdmin || !universityAdmin.universityId) {
       return res.status(400).json({
@@ -103,22 +117,28 @@ export const bulkUploadDegrees = async (req: Request, res: Response) => {
       });
     }
 
+
     const universityId = universityAdmin.universityId;
+
 
     if (!req.file || !req.file.buffer) {
       return res.status(400).json({ message: 'CSV file is required' });
     }
 
+
     const degrees: DegreeCreationAttributes[] = [];
     const errors: any[] = [];
     const emailsSet = new Set<string>();
 
+
     const parser = csv();
+
 
     const readable = new stream.Readable();
     readable._read = () => {}; // _read is required but you can noop it
     readable.push(req.file.buffer);
     readable.push(null);
+
 
     readable
       .pipe(parser)
@@ -131,6 +151,7 @@ export const bulkUploadDegrees = async (req: Request, res: Response) => {
           studentEmail,
         } = row;
 
+
         // Check required fields
         if (!degreeType || !major || !graduationDate || !studentEmail) {
           errors.push({
@@ -140,9 +161,11 @@ export const bulkUploadDegrees = async (req: Request, res: Response) => {
           return;
         }
 
+
         // Validate email
         const emailDomain = studentEmail.substring(studentEmail.indexOf('@')).toLowerCase(); // Includes '@'
         const universityDomain = universityAdmin.university!.domain.toLowerCase(); // Already includes '@'
+
 
         if (emailDomain !== universityDomain) {
           errors.push({
@@ -151,6 +174,7 @@ export const bulkUploadDegrees = async (req: Request, res: Response) => {
           });
           return;
         }
+
 
         // Check for duplicate emails in the same upload
         const emailLower = studentEmail.toLowerCase();
@@ -162,6 +186,7 @@ export const bulkUploadDegrees = async (req: Request, res: Response) => {
           return;
         }
         emailsSet.add(emailLower);
+
 
         degrees.push({
           universityId: universityId,
@@ -180,8 +205,10 @@ export const bulkUploadDegrees = async (req: Request, res: Response) => {
           });
         }
 
+
         // Save degrees in bulk
         await Degree.bulkCreate(degrees);
+
 
         return res.status(201).json({
           message:
@@ -199,43 +226,10 @@ export const bulkUploadDegrees = async (req: Request, res: Response) => {
   }
 };
 
-// List Draft Degrees
-export const listDraftDegrees = async (req: Request, res: Response) => {
+// Revert Degrees Confirmation
+export const revertDegreesConfirmation = async (req: Request, res: Response) => {
   const universityAdminId = req.user?.userId;
-
-  try {
-    if (!universityAdminId) {
-      return res.status(401).json({ message: 'Unauthorized' });
-    }
-
-    // Get university admin's university
-    const universityAdmin = await User.findByPk(universityAdminId);
-
-    if (!universityAdmin || !universityAdmin.universityId) {
-      return res.status(400).json({ message: 'University admin not associated with a university' });
-    }
-
-    const universityId = universityAdmin.universityId;
-
-    // Get draft degrees for this university
-    const degrees = await Degree.findAll({
-      where: {
-        universityId: universityId,
-        status: 'draft',
-      },
-    });
-
-    return res.status(200).json({ degrees });
-  } catch (error) {
-    console.error('Error listing draft degrees:', error);
-    return res.status(500).json({ message: 'Error listing draft degrees', error });
-  }
-};
-
-// Confirm Degrees (Double Confirmation)
-export const confirmDegrees = async (req: Request, res: Response) => {
-  const universityAdminId = req.user?.userId;
-  const { degreeIds, confirmationStep } = req.body; // degreeIds is an array of degree IDs
+  const { degreeIds } = req.body;
 
   try {
     if (!universityAdminId) {
@@ -254,8 +248,107 @@ export const confirmDegrees = async (req: Request, res: Response) => {
     const universityId = universityAdmin.universityId;
 
     if (!Array.isArray(degreeIds) || degreeIds.length === 0) {
+      return res.status(400).json({ message: 'No degrees selected for reverting' });
+    }
+
+    // Find the degrees
+    const degrees = await Degree.findAll({
+      where: {
+        id: degreeIds,
+        universityId: universityId,
+        status: 'pending_confirmation',
+      },
+    });
+
+    if (degrees.length !== degreeIds.length) {
+      return res.status(400).json({
+        message: 'Some degrees were not found, do not belong to your university, or are not in pending_confirmation status',
+      });
+    }
+
+    // Revert the degrees' statuses back to 'draft'
+    for (const degree of degrees) {
+      degree.status = 'draft';
+      await degree.save();
+    }
+
+    return res.status(200).json({ message: 'Degrees reverted to draft status.' });
+  } catch (error) {
+    console.error('Error reverting degrees confirmation:', error);
+    return res.status(500).json({ message: 'Error reverting degrees confirmation', error });
+  }
+};
+
+// List Draft Degrees
+export const listDraftDegrees = async (req: Request, res: Response) => {
+  const universityAdminId = req.user?.userId;
+
+
+  try {
+    if (!universityAdminId) {
+      return res.status(401).json({ message: 'Unauthorized' });
+    }
+
+
+    // Get university admin's university
+    const universityAdmin = await User.findByPk(universityAdminId);
+
+
+    if (!universityAdmin || !universityAdmin.universityId) {
+      return res.status(400).json({ message: 'University admin not associated with a university' });
+    }
+
+
+    const universityId = universityAdmin.universityId;
+
+
+    // Get draft degrees for this university
+    const degrees = await Degree.findAll({
+      where: {
+        universityId: universityId,
+        status: 'draft',
+      },
+    });
+
+
+    return res.status(200).json({ degrees });
+  } catch (error) {
+    console.error('Error listing draft degrees:', error);
+    return res.status(500).json({ message: 'Error listing draft degrees', error });
+  }
+};
+
+
+// Confirm Degrees (Double Confirmation)
+export const confirmDegrees = async (req: Request, res: Response) => {
+  const universityAdminId = req.user?.userId;
+  const { degreeIds, confirmationStep } = req.body; // degreeIds is an array of degree IDs
+
+
+  try {
+    if (!universityAdminId) {
+      return res.status(401).json({ message: 'Unauthorized' });
+    }
+
+
+    // Get university admin's university
+    const universityAdmin = await User.findByPk(universityAdminId);
+
+
+    if (!universityAdmin || !universityAdmin.universityId) {
+      return res.status(400).json({
+        message: 'University admin not associated with a university',
+      });
+    }
+
+
+    const universityId = universityAdmin.universityId;
+
+
+    if (!Array.isArray(degreeIds) || degreeIds.length === 0) {
       return res.status(400).json({ message: 'No degrees selected for confirmation' });
     }
+
 
     // Find the degrees
     const degrees = await Degree.findAll({
@@ -265,11 +358,13 @@ export const confirmDegrees = async (req: Request, res: Response) => {
       },
     });
 
+
     if (degrees.length !== degreeIds.length) {
       return res.status(400).json({
         message: 'Some degrees were not found or do not belong to your university',
       });
     }
+
 
     // Update the degrees' status based on the confirmation step
     if (confirmationStep === 1) {
@@ -309,23 +404,29 @@ export const confirmDegrees = async (req: Request, res: Response) => {
   }
 };
 
+
 // List Degrees (All statuses)
 export const listDegrees = async (req: Request, res: Response) => {
   const universityAdminId = req.user?.userId;
+
 
   try {
     if (!universityAdminId) {
       return res.status(401).json({ message: 'Unauthorized' });
     }
 
+
     // Get university admin's university
     const universityAdmin = await User.findByPk(universityAdminId);
+
 
     if (!universityAdmin || !universityAdmin.universityId) {
       return res.status(400).json({ message: 'University admin not associated with a university' });
     }
 
+
     const universityId = universityAdmin.universityId;
+
 
     // Get all degrees for this university
     const degrees = await Degree.findAll({
@@ -340,6 +441,7 @@ export const listDegrees = async (req: Request, res: Response) => {
       ],
     });
 
+
     return res.status(200).json({ degrees });
   } catch (error) {
     console.error('Error listing degrees:', error);
@@ -347,27 +449,84 @@ export const listDegrees = async (req: Request, res: Response) => {
   }
 };
 
-// Update Degree
-export const updateDegree = async (req: Request, res: Response) => {
+
+export const getMultipleDegrees = async (req: Request, res: Response) => {
   const universityAdminId = req.user?.userId;
-  const degreeId = req.params.id;
-  const { degreeType, major, graduationDate, studentEmail } = req.body;
+  const { degreeIds } = req.body;
+
 
   try {
     if (!universityAdminId) {
       return res.status(401).json({ message: 'Unauthorized' });
     }
 
+
+    // Get university admin's university
+    const universityAdmin = await User.findByPk(universityAdminId);
+
+
+    if (!universityAdmin || !universityAdmin.universityId) {
+      return res.status(400).json({
+        message: 'University admin not associated with a university',
+      });
+    }
+
+
+    const universityId = universityAdmin.universityId;
+
+
+    // Find the degrees
+    const degrees = await Degree.findAll({
+      where: {
+        id: degreeIds,
+        universityId: universityId,
+      },
+    });
+
+
+    if (degrees.length !== degreeIds.length) {
+      return res.status(400).json({
+        message: 'Some degrees were not found or do not belong to your university',
+      });
+    }
+
+
+    return res.status(200).json({ degrees });
+  } catch (error) {
+    console.error('Error fetching degrees:', error);
+    return res.status(500).json({ message: 'Error fetching degrees', error });
+  }
+};
+
+
+
+
+// Update Degree
+export const updateDegree = async (req: Request, res: Response) => {
+  const universityAdminId = req.user?.userId;
+  const degreeId = req.params.id;
+  const { degreeType, major, graduationDate, studentEmail } = req.body;
+
+
+  try {
+    if (!universityAdminId) {
+      return res.status(401).json({ message: 'Unauthorized' });
+    }
+
+
     // Get university admin's university
     const universityAdmin = await User.findByPk(universityAdminId, {
       include: [University],
     });
 
+
     if (!universityAdmin || !universityAdmin.universityId) {
       return res.status(400).json({ message: 'University admin not associated with a university' });
     }
 
+
     const universityId = universityAdmin.universityId;
+
 
     // Find the degree
     const degree = await Degree.findOne({
@@ -377,33 +536,51 @@ export const updateDegree = async (req: Request, res: Response) => {
       },
     });
 
+
     if (!degree) {
       return res.status(404).json({ message: 'Degree not found' });
     }
+
 
     // Only allow updates if the degree is in 'draft' status
     if (degree.status !== 'draft') {
       return res.status(400).json({ message: 'Cannot update a degree that is not in draft status' });
     }
 
+
     // Check that the student email matches the university domain
     if (studentEmail) {
       const emailDomain = studentEmail.substring(studentEmail.indexOf('@')).toLowerCase(); // Includes '@'
       const universityDomain = universityAdmin.university!.domain.toLowerCase(); // Already includes '@'
 
+
       if (emailDomain !== universityDomain) {
         return res.status(400).json({ message: 'Student email domain does not match university domain' });
       }
 
+
       degree.studentEmail = studentEmail.toLowerCase();
     }
 
-    // Update the degree
+
+    // Update the degree fields
     degree.degreeType = degreeType || degree.degreeType;
     degree.major = major || degree.major;
     degree.graduationDate = graduationDate ? new Date(graduationDate) : degree.graduationDate;
 
+
+    // Handle file upload
+    if (req.file && req.file.path) {
+      // Delete old file if exists
+      if (degree.filePath && fs.existsSync(degree.filePath)) {
+        fs.unlinkSync(degree.filePath);
+      }
+      degree.filePath = req.file.path;
+    }
+
+
     await degree.save();
+
 
     return res.status(200).json({ message: 'Degree updated successfully', degree });
   } catch (error) {
@@ -412,24 +589,32 @@ export const updateDegree = async (req: Request, res: Response) => {
   }
 };
 
+
+
+
 // Delete Degree
 export const deleteDegree = async (req: Request, res: Response) => {
   const universityAdminId = req.user?.userId;
   const degreeId = req.params.id;
+
 
   try {
     if (!universityAdminId) {
       return res.status(401).json({ message: 'Unauthorized' });
     }
 
+
     // Get university admin's university
     const universityAdmin = await User.findByPk(universityAdminId);
+
 
     if (!universityAdmin || !universityAdmin.universityId) {
       return res.status(400).json({ message: 'University admin not associated with a university' });
     }
 
+
     const universityId = universityAdmin.universityId;
+
 
     // Find the degree
     const degree = await Degree.findOne({
@@ -439,21 +624,26 @@ export const deleteDegree = async (req: Request, res: Response) => {
       },
     });
 
+
     if (!degree) {
       return res.status(404).json({ message: 'Degree not found' });
     }
+
 
     // Only allow deletion if the degree is in 'draft' status
     if (degree.status !== 'draft') {
       return res.status(400).json({ message: 'Cannot delete a degree that is not in draft status' });
     }
 
+
     // Delete the degree file if exists
     if (degree.filePath && fs.existsSync(degree.filePath)) {
       fs.unlinkSync(degree.filePath);
     }
 
+
     await degree.destroy();
+
 
     return res.status(200).json({ message: 'Degree deleted successfully' });
   } catch (error) {

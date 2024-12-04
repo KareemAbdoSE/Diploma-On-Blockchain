@@ -11,6 +11,7 @@ import EditDegreePage from './pages/EditDegreePage';
 import MyDegreePage from './pages/MyDegreePage';
 import BulkUploadPage from './pages/BulkUploadPage';
 import { useAuth } from './hooks/useAuth';
+import EditDegreesPage from './pages/EditDegreesPage';
 
 const App: React.FC = () => {
   const { isAuthenticated } = useAuth();
@@ -43,6 +44,14 @@ const App: React.FC = () => {
           element={
             <ProtectedRoute roles={['UniversityAdmin']}>
               <UploadDegreePage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="edit-degrees"
+          element={
+            <ProtectedRoute roles={['UniversityAdmin']}>
+              <EditDegreesPage />
             </ProtectedRoute>
           }
         />

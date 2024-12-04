@@ -9,7 +9,8 @@ import {
   listDegrees,
   updateDegree,
   confirmDegrees,
-  deleteDegree,
+  deleteDegree, getMultipleDegrees,
+  revertDegreesConfirmation,
 } from '../controllers/degreeController';
 import { body } from 'express-validator';
 import asyncHandler from '../utils/asyncHandler';
@@ -31,6 +32,19 @@ router.post(
     body('studentEmail').isEmail().withMessage('Valid student email is required'),
   ],
   asyncHandler(uploadDegree)
+);
+
+// Revert degrees confirmation (University Admins only)
+router.post(
+  '/revert-confirmation',
+  authenticateJWT,
+  authorizeRoles(['UniversityAdmin']),
+  [
+    body('degreeIds')
+      .isArray({ min: 1 })
+      .withMessage('Degree IDs must be an array with at least one ID'),
+  ],
+  asyncHandler(revertDegreesConfirmation)
 );
 
 // Bulk upload degrees (University Admins only)
@@ -63,6 +77,7 @@ router.put(
   '/:id',
   authenticateJWT,
   authorizeRoles(['UniversityAdmin']),
+  upload.single('degreeFile'),
   [
     body('degreeType').optional().notEmpty().withMessage('Degree type must not be empty'),
     body('major').optional().notEmpty().withMessage('Major must not be empty'),
@@ -92,4 +107,13 @@ router.post(
   asyncHandler(confirmDegrees)
 );
 
+router.post(
+  '/get-multiple',
+  authenticateJWT,
+  authorizeRoles(['UniversityAdmin']),
+  [
+    body('degreeIds').isArray({ min: 1 }).withMessage('Degree IDs must be an array with at least one ID'),
+  ],
+  asyncHandler(getMultipleDegrees)
+);
 export default router;
