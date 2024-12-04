@@ -12,6 +12,8 @@ const validationSchema = yup.object({
   degreeType: yup.string().required('Degree Type is required'),
   major: yup.string().required('Major is required'),
   graduationDate: yup.date().required('Graduation Date is required'),
+  studentEmail: yup.string().email('Enter a valid email').required('Student Email is required'),
+  degreeFile: yup.mixed(),
 });
 
 const EditDegreePage: React.FC = () => {
@@ -26,6 +28,8 @@ const EditDegreePage: React.FC = () => {
     degreeType: '',
     major: '',
     graduationDate: '',
+    studentEmail: '',
+    degreeFile: null as File | null,
   });
 
   useEffect(() => {
@@ -47,6 +51,8 @@ const EditDegreePage: React.FC = () => {
           degreeType: degree.degreeType,
           major: degree.major,
           graduationDate: degree.graduationDate.split('T')[0], // Format date for input
+          studentEmail: degree.studentEmail,
+          degreeFile: null,
         });
         setLoading(false);
       } catch (error: any) {
@@ -55,7 +61,6 @@ const EditDegreePage: React.FC = () => {
       }
     };
     fetchDegree();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
   const formik = useFormik({
@@ -67,9 +72,19 @@ const EditDegreePage: React.FC = () => {
       setSuccess(null);
       try {
         const token = localStorage.getItem('token');
-        await axios.put(`${process.env.REACT_APP_API_URL}/api/degrees/${id}`, values, {
+        const formData = new FormData();
+        formData.append('degreeType', values.degreeType);
+        formData.append('major', values.major);
+        formData.append('graduationDate', values.graduationDate);
+        formData.append('studentEmail', values.studentEmail);
+        if (values.degreeFile) {
+          formData.append('degreeFile', values.degreeFile);
+        }
+
+        await axios.put(`${process.env.REACT_APP_API_URL}/api/degrees/${id}`, formData, {
           headers: {
             Authorization: `Bearer ${token}`,
+            'Content-Type': 'multipart/form-data',
           },
         });
         setSuccess('Degree updated successfully');
@@ -149,6 +164,30 @@ const EditDegreePage: React.FC = () => {
             error={formik.touched.graduationDate && !!formik.errors.graduationDate}
             helperText={formik.touched.graduationDate ? formik.errors.graduationDate : ''}
           />
+          <TextField
+            fullWidth
+            margin="normal"
+            id="studentEmail"
+            name="studentEmail"
+            label="Student Email"
+            variant="outlined"
+            value={formik.values.studentEmail}
+            onChange={formik.handleChange}
+            error={formik.touched.studentEmail && !!formik.errors.studentEmail}
+            helperText={formik.touched.studentEmail ? formik.errors.studentEmail : ''}
+          />
+          <input
+            id="degreeFile"
+            name="degreeFile"
+            type="file"
+            accept=".pdf"
+            onChange={(event: any) => {
+              formik.setFieldValue('degreeFile', event.currentTarget.files[0]);
+            }}
+          />
+          {formik.touched.degreeFile && formik.errors.degreeFile && (
+            <div style={{ color: 'red' }}>{formik.errors.degreeFile}</div>
+          )}
           <Button color="primary" variant="contained" fullWidth type="submit" sx={{ mt: 2 }}>
             Update Degree
           </Button>
