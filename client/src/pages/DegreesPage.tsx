@@ -16,6 +16,11 @@ import {
   DialogContent,
   DialogActions,
   Box,
+  TextField,
+  Select,
+  MenuItem,
+  FormControl,
+  InputLabel,
 } from '@mui/material';
 import axios from 'axios';
 import { useAuth } from '../hooks/useAuth';
@@ -38,10 +43,20 @@ interface Degree {
 
 const DegreesPage: React.FC = () => {
   const [degrees, setDegrees] = useState<Degree[]>([]);
+  const [filteredDegrees, setFilteredDegrees] = useState<Degree[]>([]);
   const [selectedDegrees, setSelectedDegrees] = useState<number[]>([]);
   const [error, setError] = useState<string | null>(null);
   const { user } = useAuth();
   const navigate = useNavigate();
+
+  // State for filters
+  const [statusFilter, setStatusFilter] = useState<string>('');
+  const [graduationDateFilter, setGraduationDateFilter] = useState<string>('');
+  const [majorFilter, setMajorFilter] = useState<string>('');
+
+  // State for search
+  const [searchField, setSearchField] = useState<string>('studentEmail');
+  const [searchQuery, setSearchQuery] = useState<string>('');
 
   // State for confirmation dialog
   const [openConfirmDialog, setOpenConfirmDialog] = useState<boolean>(false);
@@ -57,12 +72,56 @@ const DegreesPage: React.FC = () => {
           },
         });
         setDegrees(response.data.degrees);
+        setFilteredDegrees(response.data.degrees);
       } catch (error: any) {
         setError(error.response?.data?.message || 'Failed to fetch degrees');
       }
     };
     fetchDegrees();
   }, []);
+
+  // Apply filters and search whenever any relevant state changes
+  useEffect(() => {
+    let filtered = degrees;
+
+    // Apply status filter
+    if (statusFilter) {
+      filtered = filtered.filter((degree) => degree.status === statusFilter);
+    }
+
+    // Apply graduation date filter
+    if (graduationDateFilter) {
+      filtered = filtered.filter(
+        (degree) => degree.graduationDate.split('T')[0] === graduationDateFilter
+      );
+    }
+
+    // Apply major or degree type filter
+    if (majorFilter) {
+      filtered = filtered.filter(
+        (degree) =>
+          degree.major.toLowerCase().includes(majorFilter.toLowerCase()) ||
+          degree.degreeType.toLowerCase().includes(majorFilter.toLowerCase())
+      );
+    }
+
+    // Apply search filter
+    if (searchQuery) {
+      filtered = filtered.filter((degree) => {
+        const fieldValue = (degree as any)[searchField]?.toString().toLowerCase();
+        return fieldValue?.includes(searchQuery.toLowerCase());
+      });
+    }
+
+    setFilteredDegrees(filtered);
+  }, [
+    statusFilter,
+    graduationDateFilter,
+    majorFilter,
+    searchField,
+    searchQuery,
+    degrees,
+  ]);
 
   const handleEdit = (degreeId: number) => {
     navigate('/dashboard/edit-degrees', { state: { degreeIds: [degreeId] } });
@@ -95,6 +154,15 @@ const DegreesPage: React.FC = () => {
       setSelectedDegrees(selectedDegrees.filter((id) => id !== degreeId));
     } else {
       setSelectedDegrees([...selectedDegrees, degreeId]);
+    }
+  };
+
+  const handleSelectAllDegrees = () => {
+    if (selectedDegrees.length === filteredDegrees.length) {
+      setSelectedDegrees([]);
+    } else {
+      const allDegreeIds = filteredDegrees.map((degree) => degree.id);
+      setSelectedDegrees(allDegreeIds);
     }
   };
 
@@ -177,6 +245,70 @@ const DegreesPage: React.FC = () => {
         Degrees
       </Typography>
       {error && <Alert severity="error">{error}</Alert>}
+
+      {/* Filters and Search */}
+      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, mb: 2 }}>
+        {/* Status Filter */}
+        <FormControl sx={{ minWidth: 150 }}>
+          <InputLabel>Status</InputLabel>
+          <Select
+            value={statusFilter}
+            label="Status"
+            onChange={(e) => setStatusFilter(e.target.value as string)}
+          >
+            <MenuItem value="">
+              <em>All</em>
+            </MenuItem>
+            <MenuItem value="draft">Draft</MenuItem>
+            <MenuItem value="pending_confirmation">Pending Confirmation</MenuItem>
+            <MenuItem value="submitted">Submitted</MenuItem>
+            <MenuItem value="linked">Linked</MenuItem>
+            {/* Add other statuses if needed */}
+          </Select>
+        </FormControl>
+
+        {/* Graduation Date Filter */}
+        <TextField
+          label="Graduation Date"
+          type="date"
+          InputLabelProps={{
+            shrink: true,
+          }}
+          value={graduationDateFilter}
+          onChange={(e) => setGraduationDateFilter(e.target.value)}
+        />
+
+        {/* Major or Degree Type Filter */}
+        <TextField
+          label="Major or Degree Type"
+          value={majorFilter}
+          onChange={(e) => setMajorFilter(e.target.value)}
+        />
+
+        {/* Search Field Dropdown */}
+        <FormControl sx={{ minWidth: 150 }}>
+          <InputLabel>Search Field</InputLabel>
+          <Select
+            value={searchField}
+            label="Search Field"
+            onChange={(e) => setSearchField(e.target.value as string)}
+          >
+            <MenuItem value="studentEmail">Student Email</MenuItem>
+            <MenuItem value="degreeType">Degree Type</MenuItem>
+            <MenuItem value="major">Major</MenuItem>
+            {/* Add other searchable fields if needed */}
+          </Select>
+        </FormControl>
+
+        {/* Search Input */}
+        <TextField
+          label="Search"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+        />
+      </Box>
+
+      {/* Actions */}
       {selectedDegrees.length > 0 && (
         <Box sx={{ mb: 2 }}>
           <Button variant="contained" color="primary" onClick={handleEditSelectedDegrees} sx={{ mr: 1 }}>
@@ -187,10 +319,19 @@ const DegreesPage: React.FC = () => {
           </Button>
         </Box>
       )}
+
       <Table>
         <TableHead>
           <TableRow>
-            <TableCell>Select</TableCell>
+            <TableCell>
+              <Checkbox
+                checked={selectedDegrees.length === filteredDegrees.length && filteredDegrees.length > 0}
+                indeterminate={
+                  selectedDegrees.length > 0 && selectedDegrees.length < filteredDegrees.length
+                }
+                onChange={handleSelectAllDegrees}
+              />
+            </TableCell>
             <TableCell>ID</TableCell>
             <TableCell>Student Email</TableCell>
             <TableCell>Degree Type</TableCell>
@@ -201,7 +342,7 @@ const DegreesPage: React.FC = () => {
           </TableRow>
         </TableHead>
         <TableBody>
-          {degrees.map((degree) => (
+          {filteredDegrees.map((degree) => (
             <TableRow key={degree.id}>
               <TableCell>
                 {(degree.status === 'draft' || degree.status === 'pending_confirmation') && (
