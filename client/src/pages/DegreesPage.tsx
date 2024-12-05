@@ -52,7 +52,6 @@ const DegreesPage: React.FC = () => {
   // State for filters
   const [statusFilter, setStatusFilter] = useState<string>('');
   const [graduationDateFilter, setGraduationDateFilter] = useState<string>('');
-  const [majorFilter, setMajorFilter] = useState<string>('');
 
   // State for search
   const [searchField, setSearchField] = useState<string>('studentEmail');
@@ -91,18 +90,10 @@ const DegreesPage: React.FC = () => {
 
     // Apply graduation date filter
     if (graduationDateFilter) {
-      filtered = filtered.filter(
-        (degree) => degree.graduationDate.split('T')[0] === graduationDateFilter
-      );
-    }
-
-    // Apply major or degree type filter
-    if (majorFilter) {
-      filtered = filtered.filter(
-        (degree) =>
-          degree.major.toLowerCase().includes(majorFilter.toLowerCase()) ||
-          degree.degreeType.toLowerCase().includes(majorFilter.toLowerCase())
-      );
+      filtered = filtered.filter((degree) => {
+        const degreeDate = degree.graduationDate.split('T')[0]; // 'YYYY-MM-DD'
+        return degreeDate.startsWith(graduationDateFilter);
+      });
     }
 
     // Apply search filter
@@ -117,7 +108,6 @@ const DegreesPage: React.FC = () => {
   }, [
     statusFilter,
     graduationDateFilter,
-    majorFilter,
     searchField,
     searchQuery,
     degrees,
@@ -270,19 +260,13 @@ const DegreesPage: React.FC = () => {
         {/* Graduation Date Filter */}
         <TextField
           label="Graduation Date"
-          type="date"
+          type="text"
+          placeholder="YYYY or YYYY-MM or YYYY-MM-DD"
           InputLabelProps={{
             shrink: true,
           }}
           value={graduationDateFilter}
           onChange={(e) => setGraduationDateFilter(e.target.value)}
-        />
-
-        {/* Major or Degree Type Filter */}
-        <TextField
-          label="Major or Degree Type"
-          value={majorFilter}
-          onChange={(e) => setMajorFilter(e.target.value)}
         />
 
         {/* Search Field Dropdown */}
@@ -323,7 +307,7 @@ const DegreesPage: React.FC = () => {
       <Table>
         <TableHead>
           <TableRow>
-            <TableCell>
+            <TableCell sx={{ fontWeight: 'bold' }}>
               <Checkbox
                 checked={selectedDegrees.length === filteredDegrees.length && filteredDegrees.length > 0}
                 indeterminate={
@@ -332,13 +316,13 @@ const DegreesPage: React.FC = () => {
                 onChange={handleSelectAllDegrees}
               />
             </TableCell>
-            <TableCell>ID</TableCell>
-            <TableCell>Student Email</TableCell>
-            <TableCell>Degree Type</TableCell>
-            <TableCell>Major</TableCell>
-            <TableCell>Graduation Date</TableCell>
-            <TableCell>Status</TableCell>
-            <TableCell>Actions</TableCell>
+            <TableCell sx={{ fontWeight: 'bold' }}>ID</TableCell>
+            <TableCell sx={{ fontWeight: 'bold' }}>Student Email</TableCell>
+            <TableCell sx={{ fontWeight: 'bold' }}>Degree Type</TableCell>
+            <TableCell sx={{ fontWeight: 'bold' }}>Major</TableCell>
+            <TableCell sx={{ fontWeight: 'bold' }}>Graduation Date</TableCell>
+            <TableCell sx={{ fontWeight: 'bold' }}>Status</TableCell>
+            <TableCell sx={{ fontWeight: 'bold' }}>Actions</TableCell>
           </TableRow>
         </TableHead>
         <TableBody>
