@@ -1,3 +1,5 @@
+// src/routes/degreeRoutes.ts
+
 import express from 'express';
 import { authenticateJWT } from '../middlewares/authMiddleware';
 import { authorizeRoles } from '../middlewares/roleMiddleware';
@@ -10,6 +12,7 @@ import {
   updateDegree,
   confirmDegrees,
   deleteDegree, getMultipleDegrees,
+  listAvailableDegreesToClaim,
   revertDegreesConfirmation,
 } from '../controllers/degreeController';
 import { body } from 'express-validator';
@@ -116,4 +119,13 @@ router.post(
   ],
   asyncHandler(getMultipleDegrees)
 );
+
+// Available degrees to claim (Students only)
+router.get(
+  '/available-to-claim',
+  authenticateJWT,
+  authorizeRoles(['Student']),
+  asyncHandler(listAvailableDegreesToClaim)
+);
+
 export default router;

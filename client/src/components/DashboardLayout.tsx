@@ -8,8 +8,7 @@ import { useAuth } from '../hooks/useAuth';
 const DashboardLayout: React.FC = () => {
   const { logout, user } = useAuth();
   const navigate = useNavigate();
-  const [degreeMenuAnchorEl, setDegreeMenuAnchorEl] = useState<null | HTMLElement>(null);
-  const [templateMenuAnchorEl, setTemplateMenuAnchorEl] = useState<null | HTMLElement>(null);
+  const [uploadDegreeAnchorEl, setUploadDegreeAnchorEl] = useState<null | HTMLElement>(null);
 
   const handleLogout = () => {
     logout();
@@ -20,29 +19,21 @@ const DashboardLayout: React.FC = () => {
   };
 
   const getTitle = () => {
-    if (user.role === 'UniversityAdmin') {
+    if (user?.role === 'UniversityAdmin') {
       return 'University Admin Dashboard';
-    } else if (user.role === 'Student') {
+    } else if (user?.role === 'Student') {
       return 'Student Dashboard';
     } else {
       return 'Dashboard';
     }
   };
 
-  const handleDegreeMenuClick = (event: React.MouseEvent<HTMLButtonElement>) => {
-    setDegreeMenuAnchorEl(event.currentTarget);
+  const handleUploadDegreeClick = (event: React.MouseEvent<HTMLButtonElement>) => {
+    setUploadDegreeAnchorEl(event.currentTarget);
   };
 
-  const handleDegreeMenuClose = () => {
-    setDegreeMenuAnchorEl(null);
-  };
-
-  const handleTemplateMenuClick = (event: React.MouseEvent<HTMLButtonElement>) => {
-    setTemplateMenuAnchorEl(event.currentTarget);
-  };
-
-  const handleTemplateMenuClose = () => {
-    setTemplateMenuAnchorEl(null);
+  const handleUploadDegreeClose = () => {
+    setUploadDegreeAnchorEl(null);
   };
 
   return (
@@ -52,31 +43,26 @@ const DashboardLayout: React.FC = () => {
           <Typography variant="h6" sx={{ flexGrow: 1 }}>
             {getTitle()}
           </Typography>
-          {user.role === 'UniversityAdmin' && (
+
+          {user?.role === 'UniversityAdmin' && (
             <>
               <Button color="inherit" onClick={() => handleNavigate('/dashboard')}>
                 Degrees
               </Button>
-              <Button
-                color="inherit"
-                onClick={() => handleNavigate('/dashboard/template-management')}
-              >
+              <Button color="inherit" onClick={() => handleNavigate('/dashboard/template-management')}>
                 Manage Templates
               </Button>
-              <Button
-                color="inherit"
-                onClick={handleDegreeMenuClick}
-              >
+              <Button color="inherit" onClick={handleUploadDegreeClick}>
                 Upload Degree
               </Button>
               <Menu
-                anchorEl={degreeMenuAnchorEl}
-                open={Boolean(degreeMenuAnchorEl)}
-                onClose={handleDegreeMenuClose}
+                anchorEl={uploadDegreeAnchorEl}
+                open={Boolean(uploadDegreeAnchorEl)}
+                onClose={handleUploadDegreeClose}
               >
                 <MenuItem
                   onClick={() => {
-                    handleDegreeMenuClose();
+                    handleUploadDegreeClose();
                     handleNavigate('/dashboard/upload-degree');
                   }}
                 >
@@ -84,7 +70,7 @@ const DashboardLayout: React.FC = () => {
                 </MenuItem>
                 <MenuItem
                   onClick={() => {
-                    handleDegreeMenuClose();
+                    handleUploadDegreeClose();
                     handleNavigate('/dashboard/bulk-upload');
                   }}
                 >
@@ -93,13 +79,18 @@ const DashboardLayout: React.FC = () => {
               </Menu>
             </>
           )}
-          {user.role === 'Student' && (
+
+          {user?.role === 'Student' && (
             <>
+              <Button color="inherit" onClick={() => handleNavigate('/dashboard/student')}>
+                Available Degrees
+              </Button>
               <Button color="inherit" onClick={() => handleNavigate('/dashboard/my-degree')}>
                 My Degree
               </Button>
             </>
           )}
+
           <Button color="inherit" onClick={handleLogout}>
             Logout
           </Button>

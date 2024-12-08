@@ -1,25 +1,38 @@
 // src/contexts/AuthContext.tsx
 
 import React, { createContext, useState, useEffect, ReactNode } from 'react';
-import axios from 'axios';
 import { jwtDecode } from 'jwt-decode';
+import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 
 interface AuthContextType {
-  isAuthenticated: boolean;
-  user: any;
+  user: User | null;
   login: (email: string, password: string, mfaToken?: string) => Promise<void>;
   logout: () => void;
+  isAuthenticated: boolean;
 }
 
-export const AuthContext = createContext<AuthContextType | null>(null);
+interface User {
+  userId: number;
+  roleId: number;
+  role: string;
+}
 
-interface Props {
+interface JWTTokenPayload {
+  userId: number;
+  roleId: number;
+  role: string;
+  exp: number;
+}
+
+export const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+interface AuthProviderProps {
   children: ReactNode;
 }
 
-export const AuthProvider: React.FC<Props> = ({ children }) => {
-  const [user, setUser] = useState<any>(null);
+export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
+  const [user, setUser] = useState<User | null>(null);
   const navigate = useNavigate();
 
   const login = async (email: string, password: string, mfaToken?: string) => {
@@ -31,16 +44,25 @@ export const AuthProvider: React.FC<Props> = ({ children }) => {
       });
 
       const { token } = response.data;
-      // Save token to localStorage
       localStorage.setItem('token', token);
-      // Decode token to get user info
-      const decodedUser = jwtDecode(token);
-      setUser(decodedUser);
-      // Redirect to dashboard
-      navigate('/dashboard');
+
+      const decoded: JWTTokenPayload = jwtDecode(token);
+      setUser({
+        userId: decoded.userId,
+        roleId: decoded.roleId,
+        role: decoded.role,
+      });
+
+      // Redirect based on role
+      if (decoded.role === 'UniversityAdmin') {
+        navigate('/dashboard');
+      } else if (decoded.role === 'Student') {
+        navigate('/dashboard/student');
+      } else {
+        navigate('/dashboard'); // Default redirect
+      }
     } catch (error: any) {
-      const errorMessage = error.response?.data?.message || 'Login failed';
-      throw new Error(errorMessage);
+      throw new Error(error.response?.data?.message || 'Login failed');
     }
   };
 
@@ -50,31 +72,39 @@ export const AuthProvider: React.FC<Props> = ({ children }) => {
     navigate('/login');
   };
 
-  useEffect(() => {
+  const checkAuth = () => {
     const token = localStorage.getItem('token');
     if (token) {
       try {
-        const decodedUser = jwtDecode(token);
-        setUser(decodedUser);
+        const decoded: JWTTokenPayload = jwtDecode(token);
+        const currentTime = Date.now() / 1000;
+        if (decoded.exp < currentTime) {
+          // Token expired
+          logout();
+        } else {
+          setUser({
+            userId: decoded.userId,
+            roleId: decoded.roleId,
+            role: decoded.role,
+          });
+        }
       } catch (error) {
         // Invalid token
-        localStorage.removeItem('token');
-        setUser(null);
+        logout();
       }
     }
+  };
+
+  useEffect(() => {
+    checkAuth();
+    // Optionally, set up an interval to check token expiry
+    // const interval = setInterval(checkAuth, 60000); // every 1 minute
+    // return () => clearInterval(interval);
   }, []);
 
   return (
-    <AuthContext.Provider
-      value={{
-        isAuthenticated: !!user,
-        user,
-        login,
-        logout,
-      }}
-    >
+    <AuthContext.Provider value={{ user, login, logout, isAuthenticated: !!user }}>
       {children}
     </AuthContext.Provider>
   );
 };
-
