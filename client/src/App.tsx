@@ -10,13 +10,11 @@ import UploadDegreePage from './pages/UploadDegreePage';
 import EditDegreePage from './pages/EditDegreePage';
 import MyDegreePage from './pages/MyDegreePage';
 import BulkUploadPage from './pages/BulkUploadPage';
-import { useAuth } from './hooks/useAuth';
 import EditDegreesPage from './pages/EditDegreesPage';
 import TemplateManagementPage from './pages/TemplateManagementPage';
+import StudentDashboard from './pages/StudentDashboard';
 
 const App: React.FC = () => {
-  const { isAuthenticated } = useAuth();
-
   return (
     <Routes>
       <Route path="/login" element={<LoginPage />} />
@@ -64,8 +62,24 @@ const App: React.FC = () => {
             </ProtectedRoute>
           }
         />
-        <Route path="template-management" element={<TemplateManagementPage />} />
+        <Route
+          path="template-management"
+          element={
+            <ProtectedRoute roles={['UniversityAdmin']}>
+              <TemplateManagementPage />
+            </ProtectedRoute>
+          }
+        />
+
         {/* Student Routes */}
+        <Route
+          path="student"
+          element={
+            <ProtectedRoute roles={['Student']}>
+              <StudentDashboard />
+            </ProtectedRoute>
+          }
+        />
         <Route
           path="my-degree"
           element={
@@ -86,4 +100,3 @@ const App: React.FC = () => {
 };
 
 export default App;
-

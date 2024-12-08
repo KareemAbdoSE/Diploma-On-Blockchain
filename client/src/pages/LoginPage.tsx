@@ -1,7 +1,7 @@
 // src/pages/LoginPage.tsx
 
-import React from 'react';
-import { Container, TextField, Button, Typography, Box, Alert } from '@mui/material';
+import React, { useState } from 'react';
+import { Container, TextField, Button, Typography, Box, Alert, CircularProgress } from '@mui/material';
 import { useAuth } from '../hooks/useAuth';
 import { useFormik } from 'formik';
 import * as yup from 'yup';
@@ -9,12 +9,13 @@ import * as yup from 'yup';
 const validationSchema = yup.object({
   email: yup.string().email('Enter a valid email').required('Email is required'),
   password: yup.string().required('Password is required'),
-  mfaToken: yup.string(),
+  mfaToken: yup.string(), // Optional, only for MFA-enabled users
 });
 
 const LoginPage: React.FC = () => {
   const { login } = useAuth();
-  const [error, setError] = React.useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState<boolean>(false);
 
   const formik = useFormik({
     initialValues: {
@@ -25,21 +26,25 @@ const LoginPage: React.FC = () => {
     validationSchema: validationSchema,
     onSubmit: async (values) => {
       setError(null);
+      setLoading(true);
       try {
         await login(values.email, values.password, values.mfaToken || undefined);
-      } catch (error: any) {
-        setError(error.message || 'Login failed');
+        // Redirection is handled in the login function based on role
+      } catch (err: any) {
+        setError(err.message);
+      } finally {
+        setLoading(false);
       }
     },
   });
 
   return (
     <Container maxWidth="sm">
-      <Box sx={{ mt: 8 }}>
-        <Typography variant="h4" gutterBottom>
+      <Box sx={{ mt: 8, p: 4, boxShadow: 3, borderRadius: 2 }}>
+        <Typography variant="h4" gutterBottom align="center">
           Login
         </Typography>
-        {error && <Alert severity="error">{error}</Alert>}
+        {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
         <form onSubmit={formik.handleSubmit}>
           <TextField
             fullWidth
@@ -50,7 +55,7 @@ const LoginPage: React.FC = () => {
             variant="outlined"
             value={formik.values.email}
             onChange={formik.handleChange}
-            error={formik.touched.email && !!formik.errors.email}
+            error={formik.touched.email && Boolean(formik.errors.email)}
             helperText={formik.touched.email ? formik.errors.email : ''}
           />
           <TextField
@@ -63,24 +68,45 @@ const LoginPage: React.FC = () => {
             variant="outlined"
             value={formik.values.password}
             onChange={formik.handleChange}
-            error={formik.touched.password && !!formik.errors.password}
+            error={formik.touched.password && Boolean(formik.errors.password)}
             helperText={formik.touched.password ? formik.errors.password : ''}
           />
+          {/* MFA Token Field - Display only if needed */}
           <TextField
             fullWidth
             margin="normal"
             id="mfaToken"
             name="mfaToken"
-            label="MFA Code (Optional)"
+            label="MFA Token (If Enabled)"
             variant="outlined"
             value={formik.values.mfaToken}
             onChange={formik.handleChange}
-            error={formik.touched.mfaToken && !!formik.errors.mfaToken}
+            error={formik.touched.mfaToken && Boolean(formik.errors.mfaToken)}
             helperText={formik.touched.mfaToken ? formik.errors.mfaToken : ''}
           />
-          <Button color="primary" variant="contained" fullWidth type="submit" sx={{ mt: 2 }}>
-            Login
-          </Button>
+          <Box sx={{ position: 'relative', mt: 3 }}>
+            <Button
+              color="primary"
+              variant="contained"
+              fullWidth
+              type="submit"
+              disabled={loading}
+            >
+              Login
+            </Button>
+            {loading && (
+              <CircularProgress
+                size={24}
+                sx={{
+                  position: 'absolute',
+                  top: '50%',
+                  left: '50%',
+                  marginTop: '-12px',
+                  marginLeft: '-12px',
+                }}
+              />
+            )}
+          </Box>
         </form>
       </Box>
     </Container>
@@ -88,5 +114,3 @@ const LoginPage: React.FC = () => {
 };
 
 export default LoginPage;
-
-

@@ -1,3 +1,5 @@
+// src/controllers/authController.ts
+
 import { Request, Response } from 'express';
 import { User, UserCreationAttributes } from '../models/User';
 import { Role } from '../models/Role';

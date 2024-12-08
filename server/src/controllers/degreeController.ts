@@ -484,3 +484,43 @@ export const deleteDegree = async (req: Request, res: Response) => {
     return res.status(500).json({ message: 'Error deleting degree', error });
   }
 };
+
+export const listAvailableDegreesToClaim = async (req: Request, res: Response) => {
+  const studentId = req.user?.userId;
+
+  try {
+    if (!studentId) {
+      return res.status(401).json({ message: 'Unauthorized' });
+    }
+
+    const student = await User.findByPk(studentId, {
+      include: [University],
+    });
+
+    if (!student || !student.universityId) {
+      return res.status(400).json({ message: 'Student not associated with any university' });
+    }
+
+    const universityId = student.universityId;
+    const studentEmail = student.email.toLowerCase();
+
+    const degrees = await Degree.findAll({
+      where: {
+        universityId: universityId,
+        studentEmail: studentEmail,
+        status: 'submitted', // Degrees that are ready to be claimed
+      },
+      include: [
+        {
+          model: University,
+          attributes: ['name'],
+        },
+      ],
+    });
+
+    return res.status(200).json({ degrees });
+  } catch (error) {
+    console.error('Error fetching available degrees:', error);
+    return res.status(500).json({ message: 'Error fetching available degrees', error });
+  }
+};

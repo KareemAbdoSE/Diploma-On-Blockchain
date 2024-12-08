@@ -1,3 +1,5 @@
+// src/controllers/templateController.ts
+
 import { Request, Response } from 'express';
 import { Template } from '../models/Template';
 import { User } from '../models/User';
