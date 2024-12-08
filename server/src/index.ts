@@ -1,9 +1,9 @@
-// src/index.ts
 import express from 'express';
 import dotenv from 'dotenv';
 import helmet from 'helmet';
 import cors from 'cors';
 import rateLimit from 'express-rate-limit';
+import path from 'path';
 import logger from './logger';
 import { sequelize } from './database';
 import authRoutes from './routes/authRoutes';
@@ -24,9 +24,9 @@ app.use(cors({
   origin: ['http://localhost:3000'], // Allow requests from your frontend
 }));
 app.use(express.json());
-app.use('/api/payment', paymentRoutes);
-app.use('/api/degrees', degreeRoutes);
-app.use('/api/template', templateRoutes);
+
+// Serve static files from the 'uploads' directory
+app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
 // Rate Limiting
 const limiter = rateLimit({
@@ -36,6 +36,9 @@ const limiter = rateLimit({
 app.use(limiter);
 
 // Routes
+app.use('/api/payment', paymentRoutes);
+app.use('/api/degrees', degreeRoutes);
+app.use('/api/template', templateRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/universities', universityRoutes);
 app.use('/api/user', userRoutes);

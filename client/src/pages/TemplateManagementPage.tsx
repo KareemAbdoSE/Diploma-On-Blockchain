@@ -141,6 +141,12 @@ const TemplateManagementPage: React.FC = () => {
     },
   });
 
+  // View template function
+  const handleViewTemplate = (filePath: string) => {
+    const fileURL = `${process.env.REACT_APP_API_URL}/${filePath}`;
+    window.open(fileURL, '_blank');
+  };
+
   return (
     <Container maxWidth="md">
       <Box sx={{ mt: 4 }}>
@@ -204,13 +210,13 @@ const TemplateManagementPage: React.FC = () => {
                     <TableRow key={template.id}>
                       <TableCell>{template.templateName}</TableCell>
                       <TableCell>
-                        <a
-                          href={`${process.env.REACT_APP_API_URL}/${template.filePath}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
+                        <Button
+                          variant="outlined"
+                          color="primary"
+                          onClick={() => handleViewTemplate(template.filePath)}
                         >
                           View
-                        </a>
+                        </Button>
                       </TableCell>
                       <TableCell>
                         <Button variant="contained" onClick={() => handleOpenDialog(template)}>
