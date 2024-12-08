@@ -12,6 +12,7 @@ import MyDegreePage from './pages/MyDegreePage';
 import BulkUploadPage from './pages/BulkUploadPage';
 import { useAuth } from './hooks/useAuth';
 import EditDegreesPage from './pages/EditDegreesPage';
+import TemplateManagementPage from './pages/TemplateManagementPage';
 
 const App: React.FC = () => {
   const { isAuthenticated } = useAuth();
@@ -63,14 +64,7 @@ const App: React.FC = () => {
             </ProtectedRoute>
           }
         />
-        <Route
-          path="bulk-upload"
-          element={
-            <ProtectedRoute roles={['UniversityAdmin']}>
-              <BulkUploadPage />
-            </ProtectedRoute>
-          }
-        />
+        <Route path="template-management" element={<TemplateManagementPage />} />
         {/* Student Routes */}
         <Route
           path="my-degree"

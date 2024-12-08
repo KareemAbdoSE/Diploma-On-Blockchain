@@ -1,3 +1,5 @@
+// src/models/Degree.ts
+
 import {
   Table,
   Column,
@@ -14,14 +16,13 @@ import University from './University';
 
 export interface DegreeAttributes {
   id: number;
-  userId?: number | null; // Nullable until linked
+  userId?: number | null;
   universityId: number;
   degreeType: string;
   major: string;
   graduationDate: Date;
   studentEmail: string;
-  status: string; // 'draft', 'submitted', 'linked'
-  filePath?: string;
+  status: string;
   createdAt?: Date;
   updatedAt?: Date;
 }
@@ -29,9 +30,7 @@ export interface DegreeAttributes {
 export interface DegreeCreationAttributes
   extends Omit<DegreeAttributes, 'id' | 'createdAt' | 'updatedAt'> {}
 
-@DefaultScope(() => ({
-  attributes: { exclude: ['filePath'] }, // Exclude filePath by default
-}))
+@DefaultScope(() => ({}))
 @Table({
   tableName: 'degrees',
   timestamps: true,
@@ -87,13 +86,7 @@ export class Degree extends Model<DegreeAttributes, DegreeCreationAttributes> {
     allowNull: false,
     defaultValue: 'draft',
   })
-  status!: string; // 'draft', 'submitted', 'linked'
-
-  @Column({
-    type: DataType.STRING,
-    allowNull: true,
-  })
-  filePath?: string;
+  status!: string;
 
   @CreatedAt
   createdAt!: Date;

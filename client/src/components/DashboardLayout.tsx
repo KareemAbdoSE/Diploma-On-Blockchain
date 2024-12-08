@@ -1,13 +1,15 @@
 // src/components/DashboardLayout.tsx
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Outlet, useNavigate } from 'react-router-dom';
-import { AppBar, Toolbar, Typography, Button, Box } from '@mui/material';
+import { AppBar, Toolbar, Typography, Button, Box, Menu, MenuItem } from '@mui/material';
 import { useAuth } from '../hooks/useAuth';
 
 const DashboardLayout: React.FC = () => {
   const { logout, user } = useAuth();
   const navigate = useNavigate();
+  const [degreeMenuAnchorEl, setDegreeMenuAnchorEl] = useState<null | HTMLElement>(null);
+  const [templateMenuAnchorEl, setTemplateMenuAnchorEl] = useState<null | HTMLElement>(null);
 
   const handleLogout = () => {
     logout();
@@ -27,6 +29,22 @@ const DashboardLayout: React.FC = () => {
     }
   };
 
+  const handleDegreeMenuClick = (event: React.MouseEvent<HTMLButtonElement>) => {
+    setDegreeMenuAnchorEl(event.currentTarget);
+  };
+
+  const handleDegreeMenuClose = () => {
+    setDegreeMenuAnchorEl(null);
+  };
+
+  const handleTemplateMenuClick = (event: React.MouseEvent<HTMLButtonElement>) => {
+    setTemplateMenuAnchorEl(event.currentTarget);
+  };
+
+  const handleTemplateMenuClose = () => {
+    setTemplateMenuAnchorEl(null);
+  };
+
   return (
     <div>
       <AppBar position="static">
@@ -39,12 +57,40 @@ const DashboardLayout: React.FC = () => {
               <Button color="inherit" onClick={() => handleNavigate('/dashboard')}>
                 Degrees
               </Button>
-              <Button color="inherit" onClick={() => handleNavigate('/dashboard/upload-degree')}>
+              <Button
+                color="inherit"
+                onClick={() => handleNavigate('/dashboard/template-management')}
+              >
+                Manage Templates
+              </Button>
+              <Button
+                color="inherit"
+                onClick={handleDegreeMenuClick}
+              >
                 Upload Degree
               </Button>
-              <Button color="inherit" onClick={() => handleNavigate('/dashboard/bulk-upload')}>
-                Bulk Upload
-              </Button>
+              <Menu
+                anchorEl={degreeMenuAnchorEl}
+                open={Boolean(degreeMenuAnchorEl)}
+                onClose={handleDegreeMenuClose}
+              >
+                <MenuItem
+                  onClick={() => {
+                    handleDegreeMenuClose();
+                    handleNavigate('/dashboard/upload-degree');
+                  }}
+                >
+                  Single
+                </MenuItem>
+                <MenuItem
+                  onClick={() => {
+                    handleDegreeMenuClose();
+                    handleNavigate('/dashboard/bulk-upload');
+                  }}
+                >
+                  Bulk
+                </MenuItem>
+              </Menu>
             </>
           )}
           {user.role === 'Student' && (
