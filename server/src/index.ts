@@ -11,6 +11,7 @@ import universityRoutes from './routes/universityRoutes';
 import userRoutes from './routes/userRoutes';
 import paymentRoutes from './routes/paymentRoutes';
 import degreeRoutes from './routes/degreeRoutes';
+import templateRoutes from './routes/templateRoutes';
 
 dotenv.config();
 
@@ -25,6 +26,7 @@ app.use(cors({
 app.use(express.json());
 app.use('/api/payment', paymentRoutes);
 app.use('/api/degrees', degreeRoutes);
+app.use('/api/template', templateRoutes);
 
 // Rate Limiting
 const limiter = rateLimit({
