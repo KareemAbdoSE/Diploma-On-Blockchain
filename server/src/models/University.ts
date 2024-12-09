@@ -59,7 +59,7 @@ export class University extends Model<
   @Column({
     type: DataType.BOOLEAN,
     allowNull: false,
-    defaultValue: false,
+    defaultValue: true, // Automatically set to true upon registration
   })
   isVerified!: boolean;
 

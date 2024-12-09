@@ -1,4 +1,5 @@
 // src/middlewares/roleMiddleware.ts
+
 import { Request, Response, NextFunction, RequestHandler } from 'express';
 import { User } from '../models/User';
 import { Role } from '../models/Role';

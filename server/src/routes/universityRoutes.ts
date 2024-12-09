@@ -1,9 +1,11 @@
 // src/routes/universityRoutes.ts
+
 import express from 'express';
 import { body } from 'express-validator';
 import {
   registerUniversity,
-  inviteUniversityAdmin, getVerifiedUniversities,
+  inviteUniversityAdmin,
+  getVerifiedUniversities,
 } from '../controllers/universityController';
 import { authenticateJWT } from '../middlewares/authMiddleware';
 import { authorizeRoles } from '../middlewares/roleMiddleware';
@@ -25,7 +27,6 @@ router.post(
   ],
   asyncHandler(registerUniversity)
 );
-
 
 // Get Verified Universities (Public Endpoint)
 router.get('/verified', asyncHandler(getVerifiedUniversities));
