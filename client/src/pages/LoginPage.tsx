@@ -1,10 +1,20 @@
 // src/pages/LoginPage.tsx
 
-import React, { useState } from 'react';
-import { Container, TextField, Button, Typography, Box, Alert, CircularProgress } from '@mui/material';
+import React from 'react';
+import {
+  Container,
+  TextField,
+  Button,
+  Typography,
+  Box,
+  Alert,
+  CircularProgress,
+  Link,
+} from '@mui/material';
 import { useAuth } from '../hooks/useAuth';
 import { useFormik } from 'formik';
 import * as yup from 'yup';
+import { Link as RouterLink } from 'react-router-dom';
 
 const validationSchema = yup.object({
   email: yup.string().email('Enter a valid email').required('Email is required'),
@@ -14,8 +24,8 @@ const validationSchema = yup.object({
 
 const LoginPage: React.FC = () => {
   const { login } = useAuth();
-  const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState<boolean>(false);
+  const [error, setError] = React.useState<string | null>(null);
+  const [loading, setLoading] = React.useState<boolean>(false);
 
   const formik = useFormik({
     initialValues: {
@@ -108,6 +118,14 @@ const LoginPage: React.FC = () => {
             )}
           </Box>
         </form>
+        <Box sx={{ mt: 2, textAlign: 'center' }}>
+          <Typography variant="body2">
+            Don't have an account?{' '}
+            <Link component={RouterLink} to="/signup">
+              Sign Up
+            </Link>
+          </Typography>
+        </Box>
       </Box>
     </Container>
   );

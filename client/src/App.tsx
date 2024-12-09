@@ -3,6 +3,7 @@
 import React from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import LoginPage from './pages/LoginPage';
+import SignUpPage from './components/SignUp/SignUpPage'; // Import SignUpPage
 import DashboardLayout from './components/DashboardLayout';
 import ProtectedRoute from './components/ProtectedRoute';
 import DegreesPage from './pages/DegreesPage';
@@ -18,6 +19,7 @@ const App: React.FC = () => {
   return (
     <Routes>
       <Route path="/login" element={<LoginPage />} />
+      <Route path="/signup" element={<SignUpPage />} /> {/* Add SignUp route */}
       <Route path="/" element={<Navigate to="/dashboard" replace />} />
 
       {/* Protected routes */}
