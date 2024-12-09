@@ -54,7 +54,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       });
 
       // Redirect based on role
-      if (decoded.role === 'UniversityAdmin') {
+      if (decoded.role === 'PlatformAdmin') {
+        navigate('/dashboard/platform-admin-dashboard');
+      } else if (decoded.role === 'UniversityAdmin') {
         navigate('/dashboard');
       } else if (decoded.role === 'Student') {
         navigate('/dashboard/student');

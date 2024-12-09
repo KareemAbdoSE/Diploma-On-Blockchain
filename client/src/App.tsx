@@ -3,7 +3,7 @@
 import React from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import LoginPage from './pages/LoginPage';
-import SignUpPage from './components/SignUp/SignUpPage'; // Import SignUpPage
+import SignUpPage from './components/SignUp/SignUpPage'; // Existing SignUpPage
 import DashboardLayout from './components/DashboardLayout';
 import ProtectedRoute from './components/ProtectedRoute';
 import DegreesPage from './pages/DegreesPage';
@@ -14,15 +14,22 @@ import BulkUploadPage from './pages/BulkUploadPage';
 import EditDegreesPage from './pages/EditDegreesPage';
 import TemplateManagementPage from './pages/TemplateManagementPage';
 import StudentDashboard from './pages/StudentDashboard';
+import PlatformAdminLogin from './pages/PlatformAdminLogin';
+import PlatformAdminDashboard from './pages/PlatformAdminDashboard';
+import RegisterUniversity from './pages/RegisterUniversity';
+import InviteUniversityAdmin from './pages/InviteUniversityAdmin';
+import RegisterUniversityAdmin from './pages/RegisterUniversityAdmin'; // University Admin Registration
 
 const App: React.FC = () => {
   return (
     <Routes>
+      {/* Public Routes */}
       <Route path="/login" element={<LoginPage />} />
-      <Route path="/signup" element={<SignUpPage />} /> {/* Add SignUp route */}
-      <Route path="/" element={<Navigate to="/dashboard" replace />} />
+      <Route path="/platform-admin/login" element={<PlatformAdminLogin />} />
+      <Route path="/signup" element={<SignUpPage />} />
+      <Route path="/register-university-admin" element={<RegisterUniversityAdmin />} />
 
-      {/* Protected routes */}
+      {/* Protected Routes */}
       <Route
         path="/dashboard"
         element={
@@ -31,6 +38,32 @@ const App: React.FC = () => {
           </ProtectedRoute>
         }
       >
+        {/* Platform Admin Routes */}
+        <Route
+          path="platform-admin-dashboard"
+          element={
+            <ProtectedRoute roles={['PlatformAdmin']}>
+              <PlatformAdminDashboard />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="register-university"
+          element={
+            <ProtectedRoute roles={['PlatformAdmin']}>
+              <RegisterUniversity />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="invite-admin"
+          element={
+            <ProtectedRoute roles={['PlatformAdmin']}>
+              <InviteUniversityAdmin />
+            </ProtectedRoute>
+          }
+        />
+
         {/* University Admin Routes */}
         <Route
           index
@@ -92,10 +125,13 @@ const App: React.FC = () => {
         />
       </Route>
 
-      {/* Unauthorized route */}
+      {/* Unauthorized Route */}
       <Route path="/unauthorized" element={<div>Unauthorized Access</div>} />
 
-      {/* Catch-all route */}
+      {/* Default Route */}
+      <Route path="/" element={<Navigate to="/dashboard" replace />} />
+
+      {/* Catch-All Route */}
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
