@@ -23,6 +23,10 @@ const DashboardLayout: React.FC = () => {
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const open = Boolean(anchorEl);
 
+  // State for managing the Upload Degree submenu (University Admin)
+  const [uploadDegreeAnchorEl, setUploadDegreeAnchorEl] = useState<null | HTMLElement>(null);
+  const isUploadDegreeMenuOpen = Boolean(uploadDegreeAnchorEl);
+
   // Handlers for mobile menu
   const handleMenu = (event: React.MouseEvent<HTMLElement>) => {
     setAnchorEl(event.currentTarget);
@@ -30,6 +34,15 @@ const DashboardLayout: React.FC = () => {
 
   const handleClose = () => {
     setAnchorEl(null);
+  };
+
+  // Handlers for Upload Degree submenu (University Admin)
+  // Changed the event type to HTMLElement to match MenuItem expectations
+  const handleUploadDegreeClick = (event: React.MouseEvent<HTMLElement>) => {
+    setUploadDegreeAnchorEl(event.currentTarget);
+  };
+  const handleUploadDegreeClose = () => {
+    setUploadDegreeAnchorEl(null);
   };
 
   // Navigation handler
@@ -83,13 +96,22 @@ const DashboardLayout: React.FC = () => {
             {/* Platform Admin Navigation */}
             {user?.role === 'PlatformAdmin' && (
               <>
-                <Button color="inherit" onClick={() => handleNavigate('/dashboard/platform-admin-dashboard')}>
+                <Button
+                  color="inherit"
+                  onClick={() => handleNavigate('/dashboard/platform-admin-dashboard')}
+                >
                   Dashboard
                 </Button>
-                <Button color="inherit" onClick={() => handleNavigate('/dashboard/register-university')}>
+                <Button
+                  color="inherit"
+                  onClick={() => handleNavigate('/dashboard/register-university')}
+                >
                   Register University
                 </Button>
-                <Button color="inherit" onClick={() => handleNavigate('/dashboard/invite-admin')}>
+                <Button
+                  color="inherit"
+                  onClick={() => handleNavigate('/dashboard/invite-admin')}
+                >
                   Invite University Admin
                 </Button>
               </>
@@ -101,22 +123,61 @@ const DashboardLayout: React.FC = () => {
                 <Button color="inherit" onClick={() => handleNavigate('/dashboard')}>
                   Degrees
                 </Button>
-                <Button color="inherit" onClick={() => handleNavigate('/dashboard/template-management')}>
+                <Button
+                  color="inherit"
+                  onClick={() => handleNavigate('/dashboard/template-management')}
+                >
                   Manage Templates
                 </Button>
-                <Button color="inherit" onClick={() => handleNavigate('/dashboard/upload-degree')}>
+                <Button color="inherit" onClick={handleUploadDegreeClick}>
                   Upload Degree
                 </Button>
+                <Menu
+                  anchorEl={uploadDegreeAnchorEl}
+                  open={isUploadDegreeMenuOpen}
+                  onClose={handleUploadDegreeClose}
+                  anchorOrigin={{
+                    vertical: 'top',
+                    horizontal: 'right',
+                  }}
+                  transformOrigin={{
+                    vertical: 'top',
+                    horizontal: 'right',
+                  }}
+                >
+                  <MenuItem
+                    onClick={() => {
+                      handleUploadDegreeClose();
+                      handleNavigate('/dashboard/upload-degree');
+                    }}
+                  >
+                    Single
+                  </MenuItem>
+                  <MenuItem
+                    onClick={() => {
+                      handleUploadDegreeClose();
+                      handleNavigate('/dashboard/bulk-upload');
+                    }}
+                  >
+                    Bulk
+                  </MenuItem>
+                </Menu>
               </>
             )}
 
             {/* Student Navigation */}
             {user?.role === 'Student' && (
               <>
-                <Button color="inherit" onClick={() => handleNavigate('/dashboard/student')}>
+                <Button
+                  color="inherit"
+                  onClick={() => handleNavigate('/dashboard/student')}
+                >
                   Available Degrees
                 </Button>
-                <Button color="inherit" onClick={() => handleNavigate('/dashboard/my-degree')}>
+                <Button
+                  color="inherit"
+                  onClick={() => handleNavigate('/dashboard/my-degree')}
+                >
                   My Degree
                 </Button>
               </>
@@ -148,9 +209,15 @@ const DashboardLayout: React.FC = () => {
             {/* Platform Admin Menu */}
             {user?.role === 'PlatformAdmin' && (
               <>
-                <MenuItem onClick={() => handleNavigate('/dashboard/platform-admin-dashboard')}>Dashboard</MenuItem>
-                <MenuItem onClick={() => handleNavigate('/dashboard/register-university')}>Register University</MenuItem>
-                <MenuItem onClick={() => handleNavigate('/dashboard/invite-admin')}>Invite University Admin</MenuItem>
+                <MenuItem onClick={() => handleNavigate('/dashboard/platform-admin-dashboard')}>
+                  Dashboard
+                </MenuItem>
+                <MenuItem onClick={() => handleNavigate('/dashboard/register-university')}>
+                  Register University
+                </MenuItem>
+                <MenuItem onClick={() => handleNavigate('/dashboard/invite-admin')}>
+                  Invite University Admin
+                </MenuItem>
               </>
             )}
 
@@ -158,16 +225,52 @@ const DashboardLayout: React.FC = () => {
             {user?.role === 'UniversityAdmin' && (
               <>
                 <MenuItem onClick={() => handleNavigate('/dashboard')}>Degrees</MenuItem>
-                <MenuItem onClick={() => handleNavigate('/dashboard/template-management')}>Manage Templates</MenuItem>
-                <MenuItem onClick={() => handleNavigate('/dashboard/upload-degree')}>Upload Degree</MenuItem>
+                <MenuItem onClick={() => handleNavigate('/dashboard/template-management')}>
+                  Manage Templates
+                </MenuItem>
+                <MenuItem onClick={handleUploadDegreeClick}>Upload Degree</MenuItem>
+                <Menu
+                  anchorEl={uploadDegreeAnchorEl}
+                  open={isUploadDegreeMenuOpen}
+                  onClose={handleUploadDegreeClose}
+                  anchorOrigin={{
+                    vertical: 'top',
+                    horizontal: 'right',
+                  }}
+                  transformOrigin={{
+                    vertical: 'top',
+                    horizontal: 'right',
+                  }}
+                >
+                  <MenuItem
+                    onClick={() => {
+                      handleUploadDegreeClose();
+                      handleNavigate('/dashboard/upload-degree');
+                    }}
+                  >
+                    Single
+                  </MenuItem>
+                  <MenuItem
+                    onClick={() => {
+                      handleUploadDegreeClose();
+                      handleNavigate('/dashboard/bulk-upload');
+                    }}
+                  >
+                    Bulk
+                  </MenuItem>
+                </Menu>
               </>
             )}
 
             {/* Student Menu */}
             {user?.role === 'Student' && (
               <>
-                <MenuItem onClick={() => handleNavigate('/dashboard/student')}>Available Degrees</MenuItem>
-                <MenuItem onClick={() => handleNavigate('/dashboard/my-degree')}>My Degree</MenuItem>
+                <MenuItem onClick={() => handleNavigate('/dashboard/student')}>
+                  Available Degrees
+                </MenuItem>
+                <MenuItem onClick={() => handleNavigate('/dashboard/my-degree')}>
+                  My Degree
+                </MenuItem>
               </>
             )}
 

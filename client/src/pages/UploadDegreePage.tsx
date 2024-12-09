@@ -12,7 +12,6 @@ interface FormValues {
   major: string;
   graduationDate: string;
   studentEmail: string;
-  degreeFile: File | null;
 }
 
 const validationSchema = yup.object({
@@ -20,7 +19,6 @@ const validationSchema = yup.object({
   major: yup.string().required('Major is required'),
   graduationDate: yup.date().required('Graduation Date is required'),
   studentEmail: yup.string().email('Enter a valid email').required('Student Email is required'),
-  degreeFile: yup.mixed(),
 });
 
 const UploadDegreePage: React.FC = () => {
@@ -34,7 +32,6 @@ const UploadDegreePage: React.FC = () => {
       major: '',
       graduationDate: '',
       studentEmail: '',
-      degreeFile: null,
     },
     validationSchema: validationSchema,
     onSubmit: async (values) => {
@@ -42,19 +39,15 @@ const UploadDegreePage: React.FC = () => {
       setSuccess(null);
       try {
         const token = localStorage.getItem('token');
-        const formData = new FormData();
-        formData.append('degreeType', values.degreeType);
-        formData.append('major', values.major);
-        formData.append('graduationDate', values.graduationDate);
-        formData.append('studentEmail', values.studentEmail);
-        if (values.degreeFile) {
-          formData.append('degreeFile', values.degreeFile);
-        }
-
-        await axios.post(`${process.env.REACT_APP_API_URL}/api/degrees/upload`, formData, {
+        await axios.post(`${process.env.REACT_APP_API_URL}/api/degrees/upload`, {
+          degreeType: values.degreeType,
+          major: values.major,
+          graduationDate: values.graduationDate,
+          studentEmail: values.studentEmail,
+        }, {
           headers: {
             Authorization: `Bearer ${token}`,
-            'Content-Type': 'multipart/form-data',
+            'Content-Type': 'application/json',
           },
         });
         setSuccess('Degree uploaded successfully');
@@ -83,7 +76,7 @@ const UploadDegreePage: React.FC = () => {
             variant="outlined"
             value={formik.values.degreeType}
             onChange={formik.handleChange}
-            error={formik.touched.degreeType && !!formik.errors.degreeType}
+            error={formik.touched.degreeType && Boolean(formik.errors.degreeType)}
             helperText={formik.touched.degreeType ? formik.errors.degreeType : ''}
           />
           <TextField
@@ -95,7 +88,7 @@ const UploadDegreePage: React.FC = () => {
             variant="outlined"
             value={formik.values.major}
             onChange={formik.handleChange}
-            error={formik.touched.major && !!formik.errors.major}
+            error={formik.touched.major && Boolean(formik.errors.major)}
             helperText={formik.touched.major ? formik.errors.major : ''}
           />
           <TextField
@@ -111,7 +104,7 @@ const UploadDegreePage: React.FC = () => {
             variant="outlined"
             value={formik.values.graduationDate}
             onChange={formik.handleChange}
-            error={formik.touched.graduationDate && !!formik.errors.graduationDate}
+            error={formik.touched.graduationDate && Boolean(formik.errors.graduationDate)}
             helperText={formik.touched.graduationDate ? formik.errors.graduationDate : ''}
           />
           <TextField
@@ -123,21 +116,9 @@ const UploadDegreePage: React.FC = () => {
             variant="outlined"
             value={formik.values.studentEmail}
             onChange={formik.handleChange}
-            error={formik.touched.studentEmail && !!formik.errors.studentEmail}
+            error={formik.touched.studentEmail && Boolean(formik.errors.studentEmail)}
             helperText={formik.touched.studentEmail ? formik.errors.studentEmail : ''}
           />
-          <input
-            id="degreeFile"
-            name="degreeFile"
-            type="file"
-            accept=".pdf"
-            onChange={(event: any) => {
-              formik.setFieldValue('degreeFile', event.currentTarget.files[0]);
-            }}
-          />
-          {formik.touched.degreeFile && formik.errors.degreeFile && (
-            <div style={{ color: 'red' }}>{formik.errors.degreeFile}</div>
-          )}
           <Button color="primary" variant="contained" fullWidth type="submit" sx={{ mt: 2 }}>
             Upload
           </Button>
@@ -148,4 +129,3 @@ const UploadDegreePage: React.FC = () => {
 };
 
 export default UploadDegreePage;
-
