@@ -14,7 +14,6 @@ import BulkUploadPage from './pages/BulkUploadPage';
 import EditDegreesPage from './pages/EditDegreesPage';
 import TemplateManagementPage from './pages/TemplateManagementPage';
 import StudentDashboard from './pages/StudentDashboard';
-import PlatformAdminLogin from './pages/PlatformAdminLogin';
 import PlatformAdminDashboard from './pages/PlatformAdminDashboard';
 import RegisterUniversity from './pages/RegisterUniversity';
 import InviteUniversityAdmin from './pages/InviteUniversityAdmin';
@@ -25,13 +24,12 @@ const App: React.FC = () => {
     <Routes>
       {/* Public Routes */}
       <Route path="/login" element={<LoginPage />} />
-      <Route path="/platform-admin/login" element={<PlatformAdminLogin />} />
       <Route path="/signup" element={<SignUpPage />} />
       <Route path="/register-university-admin" element={<RegisterUniversityAdmin />} />
 
       {/* Protected Routes */}
       <Route
-        path="/dashboard"
+        path="/dashboard/*"
         element={
           <ProtectedRoute>
             <DashboardLayout />
@@ -66,7 +64,7 @@ const App: React.FC = () => {
 
         {/* University Admin Routes */}
         <Route
-          index
+          path=""
           element={
             <ProtectedRoute roles={['UniversityAdmin']}>
               <DegreesPage />
@@ -129,10 +127,10 @@ const App: React.FC = () => {
       <Route path="/unauthorized" element={<div>Unauthorized Access</div>} />
 
       {/* Default Route */}
-      <Route path="/" element={<Navigate to="/dashboard" replace />} />
+      <Route path="/" element={<Navigate to="/login" replace />} />
 
       {/* Catch-All Route */}
-      <Route path="*" element={<Navigate to="/" replace />} />
+      <Route path="*" element={<Navigate to="/login" replace />} />
     </Routes>
   );
 };

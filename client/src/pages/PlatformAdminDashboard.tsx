@@ -5,18 +5,19 @@ import {
   Container,
   Typography,
   Box,
-  TextField,
-  Button,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Paper,
+  CircularProgress,
   Alert,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
+  TextField,
 } from '@mui/material';
 import axios from 'axios';
 import { useAuth } from '../hooks/useAuth';
-import { useFormik } from 'formik';
-import * as yup from 'yup';
 
 interface University {
   id: number;
@@ -25,29 +26,18 @@ interface University {
   accreditationDetails?: string;
 }
 
-const registerUniversitySchema = yup.object({
-  name: yup.string().required('University name is required'),
-  domain: yup
-    .string()
-    .matches(/^@([a-zA-Z0-9.-]+\.[a-zA-Z]{2,})$/, 'Enter a valid domain starting with "@" (e.g., @example.edu)')
-    .required('Domain is required'),
-  accreditationDetails: yup.string(),
-});
-
-const inviteAdminSchema = yup.object({
-  email: yup.string().email('Enter a valid email').required('Email is required'),
-  universityId: yup.number().required('University ID is required'),
-});
-
 const PlatformAdminDashboard: React.FC = () => {
   const { user, logout } = useAuth();
   const [universities, setUniversities] = useState<University[]>([]);
+  const [filteredUniversities, setFilteredUniversities] = useState<University[]>([]);
+  const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
-  const [inviteDialogOpen, setInviteDialogOpen] = useState<boolean>(false);
+  const [searchTerm, setSearchTerm] = useState<string>('');
 
-  // Fetch existing universities
-  const fetchUniversities = async () => {
+  // Fetch all verified universities
+  const fetchVerifiedUniversities = async () => {
+    setLoading(true);
+    setError(null);
     try {
       const token = localStorage.getItem('token');
       const response = await axios.get(`${process.env.REACT_APP_API_URL}/api/universities/verified`, {
@@ -56,205 +46,95 @@ const PlatformAdminDashboard: React.FC = () => {
         },
       });
       setUniversities(response.data.universities);
+      setFilteredUniversities(response.data.universities);
     } catch (err: any) {
       setError(err.response?.data?.message || 'Failed to fetch universities');
+    } finally {
+      setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchUniversities();
+    fetchVerifiedUniversities();
   }, []);
 
-  // Formik for Register University
-  const formikRegister = useFormik({
-    initialValues: {
-      name: '',
-      domain: '',
-      accreditationDetails: '',
-    },
-    validationSchema: registerUniversitySchema,
-    onSubmit: async (values, { resetForm }) => {
-      setError(null);
-      setSuccess(null);
-      try {
-        const token = localStorage.getItem('token');
-        const response = await axios.post(
-          `${process.env.REACT_APP_API_URL}/api/universities/register`,
-          values,
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          }
-        );
-        setSuccess(response.data.message);
-        resetForm();
-        // Optionally, refetch universities
-        fetchUniversities();
-      } catch (err: any) {
-        setError(err.response?.data?.message || 'Failed to register university');
-      }
-    },
-  });
-
-  // Formik for Invite University Admin
-  const formikInvite = useFormik({
-    initialValues: {
-      email: '',
-      universityId: '',
-    },
-    validationSchema: inviteAdminSchema,
-    onSubmit: async (values, { resetForm }) => {
-      setError(null);
-      setSuccess(null);
-      try {
-        const token = localStorage.getItem('token');
-        const response = await axios.post(
-          `${process.env.REACT_APP_API_URL}/api/universities/invite-admin`,
-          {
-            email: values.email,
-            universityId: parseInt(values.universityId, 10),
-          },
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          }
-        );
-        setSuccess(response.data.message);
-        resetForm();
-        setInviteDialogOpen(false);
-      } catch (err: any) {
-        setError(err.response?.data?.message || 'Failed to invite University Admin');
-      }
-    },
-  });
+  // Handle Search
+  const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const term = e.target.value.toLowerCase();
+    setSearchTerm(term);
+    if (term === '') {
+      setFilteredUniversities(universities);
+    } else {
+      const filtered = universities.filter(
+        (uni) =>
+          uni.name.toLowerCase().includes(term) ||
+          uni.domain.toLowerCase().includes(term)
+      );
+      setFilteredUniversities(filtered);
+    }
+  };
 
   return (
-    <Container maxWidth="md">
+    <Container maxWidth="lg">
       <Box sx={{ mt: 4, mb: 2, display: 'flex', justifyContent: 'space-between' }}>
         <Typography variant="h4">Platform Admin Dashboard</Typography>
-        <Button variant="outlined" color="secondary" onClick={logout}>
-          Logout
-        </Button>
+        <Box>
+          <Typography variant="subtitle1">Logged in as: {user?.email}</Typography>
+          <Typography variant="subtitle2">Role: {user?.role}</Typography>
+        </Box>
       </Box>
       {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
-      {success && <Alert severity="success" sx={{ mb: 2 }}>{success}</Alert>}
-
-      {/* Register University Section */}
-      <Box sx={{ p: 3, boxShadow: 3, borderRadius: 2, mb: 4 }}>
-        <Typography variant="h5" gutterBottom>
-          Register a New University
-        </Typography>
-        <form onSubmit={formikRegister.handleSubmit}>
-          <TextField
-            fullWidth
-            margin="normal"
-            id="name"
-            name="name"
-            label="University Name"
-            variant="outlined"
-            value={formikRegister.values.name}
-            onChange={formikRegister.handleChange}
-            error={formikRegister.touched.name && Boolean(formikRegister.errors.name)}
-            helperText={formikRegister.touched.name && formikRegister.errors.name}
-          />
-          <TextField
-            fullWidth
-            margin="normal"
-            id="domain"
-            name="domain"
-            label="Domain (e.g., @example.edu)"
-            variant="outlined"
-            value={formikRegister.values.domain}
-            onChange={formikRegister.handleChange}
-            error={formikRegister.touched.domain && Boolean(formikRegister.errors.domain)}
-            helperText={formikRegister.touched.domain && formikRegister.errors.domain}
-          />
-          <TextField
-            fullWidth
-            margin="normal"
-            id="accreditationDetails"
-            name="accreditationDetails"
-            label="Accreditation Details"
-            variant="outlined"
-            multiline
-            rows={3}
-            value={formikRegister.values.accreditationDetails}
-            onChange={formikRegister.handleChange}
-            error={
-              formikRegister.touched.accreditationDetails &&
-              Boolean(formikRegister.errors.accreditationDetails)
-            }
-            helperText={
-              formikRegister.touched.accreditationDetails &&
-              formikRegister.errors.accreditationDetails
-            }
-          />
-          <Button color="primary" variant="contained" fullWidth type="submit" sx={{ mt: 2 }}>
-            Register University
-          </Button>
-        </form>
-      </Box>
-
-      {/* Invite University Admin Section */}
-      <Box sx={{ p: 3, boxShadow: 3, borderRadius: 2 }}>
-        <Typography variant="h5" gutterBottom>
-          University Admins
-        </Typography>
-        <Button variant="contained" color="primary" onClick={() => setInviteDialogOpen(true)}>
-          Invite University Admin
-        </Button>
-
-        {/* Invite Dialog */}
-        <Dialog open={inviteDialogOpen} onClose={() => setInviteDialogOpen(false)} fullWidth maxWidth="sm">
-          <DialogTitle>Invite University Admin</DialogTitle>
-          <DialogContent>
-            <form onSubmit={formikInvite.handleSubmit}>
-              <TextField
-                fullWidth
-                margin="normal"
-                id="email"
-                name="email"
-                label="University Admin Email"
-                variant="outlined"
-                type="email"
-                value={formikInvite.values.email}
-                onChange={formikInvite.handleChange}
-                error={formikInvite.touched.email && Boolean(formikInvite.errors.email)}
-                helperText={formikInvite.touched.email && formikInvite.errors.email}
-              />
-              <TextField
-                select
-                fullWidth
-                margin="normal"
-                id="universityId"
-                name="universityId"
-                label="Select University"
-                variant="outlined"
-                value={formikInvite.values.universityId}
-                onChange={formikInvite.handleChange}
-                error={formikInvite.touched.universityId && Boolean(formikInvite.errors.universityId)}
-                helperText={formikInvite.touched.universityId && formikInvite.errors.universityId}
-              >
-                {universities.map((uni) => (
-                  <option key={uni.id} value={uni.id}>
-                    {uni.name} ({uni.domain})
-                  </option>
-                ))}
-              </TextField>
-              <Box sx={{ mt: 2 }}>
-                <Button color="primary" variant="contained" fullWidth type="submit">
-                  Send Invitation
-                </Button>
-              </Box>
-            </form>
-          </DialogContent>
-          <DialogActions>
-            <Button onClick={() => setInviteDialogOpen(false)}>Cancel</Button>
-          </DialogActions>
-        </Dialog>
-      </Box>
+      {loading ? (
+        <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
+          <CircularProgress />
+        </Box>
+      ) : (
+        <>
+          <Typography variant="h6" gutterBottom>
+            Verified Universities
+          </Typography>
+          {/* Search Field */}
+          <Box sx={{ mb: 2 }}>
+            <TextField
+              label="Search by Name or Domain"
+              variant="outlined"
+              fullWidth
+              value={searchTerm}
+              onChange={handleSearch}
+            />
+          </Box>
+          {filteredUniversities.length === 0 ? (
+            <Typography>No verified universities found.</Typography>
+          ) : (
+            <TableContainer component={Paper} sx={{ mb: 4 }}>
+              <Table>
+                <TableHead>
+                  <TableRow>
+                    <TableCell>ID</TableCell>
+                    <TableCell>Name</TableCell>
+                    <TableCell>Domain</TableCell>
+                    <TableCell>Accreditation Details</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {filteredUniversities.map((uni) => (
+                    <TableRow key={uni.id}>
+                      <TableCell>{uni.id}</TableCell>
+                      <TableCell>{uni.name}</TableCell>
+                      <TableCell>{uni.domain}</TableCell>
+                      <TableCell>
+                        {uni.accreditationDetails && uni.accreditationDetails.trim() !== ''
+                          ? uni.accreditationDetails
+                          : 'N/A'}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          )}
+        </>
+      )}
     </Container>
   );
 };
