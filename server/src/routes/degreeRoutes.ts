@@ -11,7 +11,8 @@ import {
   listDegrees,
   updateDegree,
   confirmDegrees,
-  deleteDegree, getMultipleDegrees,
+  deleteDegree,
+  getMultipleDegrees,
   listAvailableDegreesToClaim,
   revertDegreesConfirmation,
 } from '../controllers/degreeController';
@@ -27,7 +28,7 @@ router.post(
   '/upload',
   authenticateJWT,
   authorizeRoles(['UniversityAdmin']),
-  upload.single('degreeFile'),
+  // Removed: upload.single('degreeFile'),
   [
     body('degreeType').notEmpty().withMessage('Degree type is required'),
     body('major').notEmpty().withMessage('Major is required'),
@@ -80,7 +81,7 @@ router.put(
   '/:id',
   authenticateJWT,
   authorizeRoles(['UniversityAdmin']),
-  upload.single('degreeFile'),
+  upload.single('degreeFile'), // Assuming file upload is still needed during update
   [
     body('degreeType').optional().notEmpty().withMessage('Degree type must not be empty'),
     body('major').optional().notEmpty().withMessage('Major must not be empty'),
