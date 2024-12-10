@@ -1,12 +1,13 @@
 // src/components/SignUp/StudentSignUpForm.tsx
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   TextField,
   Button,
   Box,
   CircularProgress,
   Alert,
+  Autocomplete,
 } from '@mui/material';
 import { useFormik } from 'formik';
 import * as yup from 'yup';
@@ -17,7 +18,12 @@ interface StudentSignUpValues {
   email: string;
   password: string;
   confirmPassword: string;
-  universityId: number;
+  universityId: number | null;
+}
+
+interface University {
+  id: number;
+  name: string;
 }
 
 const validationSchema = yup.object({
@@ -35,7 +41,7 @@ const validationSchema = yup.object({
     .required('Confirm Password is required'),
   universityId: yup
     .number()
-    .required('University ID is required')
+    .required('Please select a university')
     .positive('University ID must be a positive number')
     .integer('University ID must be an integer'),
 });
@@ -44,14 +50,29 @@ const StudentSignUpForm: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
+  const [universities, setUniversities] = useState<University[]>([]);
   const navigate = useNavigate();
+
+  // Fetch verified universities on component mount
+  useEffect(() => {
+    const fetchUniversities = async () => {
+      try {
+        const response = await axiosInstance.get('/api/universities/verified');
+        setUniversities(response.data.universities || []);
+      } catch (err: any) {
+        console.error('Failed to fetch universities', err);
+      }
+    };
+
+    fetchUniversities();
+  }, []);
 
   const formik = useFormik<StudentSignUpValues>({
     initialValues: {
       email: '',
       password: '',
       confirmPassword: '',
-      universityId: 0,
+      universityId: null,
     },
     validationSchema: validationSchema,
     onSubmit: async (values) => {
@@ -140,23 +161,29 @@ const StudentSignUpForm: React.FC = () => {
       </Box>
 
       <Box sx={{ mb: 2 }}>
-        <TextField
-          fullWidth
-          id="universityId"
-          name="universityId"
-          label="University ID"
-          type="number"
-          variant="outlined"
-          value={formik.values.universityId}
-          onChange={formik.handleChange}
-          error={
-            formik.touched.universityId &&
-            Boolean(formik.errors.universityId)
+        <Autocomplete
+          options={universities}
+          getOptionLabel={(option) => option.name}
+          onChange={(event, value) => {
+            formik.setFieldValue('universityId', value ? value.id : null);
+          }}
+          value={
+            universities.find((u) => u.id === formik.values.universityId) || null
           }
-          helperText={
-            formik.touched.universityId &&
-            formik.errors.universityId
-          }
+          renderInput={(params) => (
+            <TextField
+              {...params}
+              label="Select University"
+              variant="outlined"
+              error={
+                formik.touched.universityId &&
+                Boolean(formik.errors.universityId)
+              }
+              helperText={
+                formik.touched.universityId && formik.errors.universityId
+              }
+            />
+          )}
         />
       </Box>
 
