@@ -9,6 +9,11 @@ import {
   Box,
   Alert,
   CircularProgress,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogContentText,
+  DialogTitle,
 } from '@mui/material';
 import { useAuth } from '../hooks/useAuth';
 import { useFormik } from 'formik';
@@ -29,6 +34,7 @@ const RegisterUniversity: React.FC = () => {
   const [error, setError] = React.useState<string | null>(null);
   const [success, setSuccess] = React.useState<string | null>(null);
   const [loading, setLoading] = React.useState<boolean>(false);
+  const [openDialog, setOpenDialog] = React.useState<boolean>(false); // State for confirmation dialog
 
   const formik = useFormik({
     initialValues: {
@@ -37,31 +43,43 @@ const RegisterUniversity: React.FC = () => {
       accreditationDetails: '',
     },
     validationSchema: validationSchema,
-    onSubmit: async (values, { resetForm }) => {
-      setError(null);
-      setSuccess(null);
-      setLoading(true);
-      try {
-        const token = localStorage.getItem('token');
-        const response = await axios.post(
-          `${process.env.REACT_APP_API_URL}/api/universities/register`,
-          values,
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-              'Content-Type': 'application/json',
-            },
-          }
-        );
-        setSuccess(response.data.message);
-        resetForm();
-      } catch (err: any) {
-        setError(err.response?.data?.message || 'Failed to register university');
-      } finally {
-        setLoading(false);
-      }
+    onSubmit: (values) => {
+      // Open confirmation dialog instead of immediate submission
+      setOpenDialog(true);
     },
   });
+
+  const handleConfirm = async () => {
+    setOpenDialog(false);
+    setError(null);
+    setSuccess(null);
+    setLoading(true);
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.post(
+        `${process.env.REACT_APP_API_URL}/api/universities/register`,
+        {
+          ...formik.values,
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+        }
+      );
+      setSuccess(response.data.message);
+      formik.resetForm();
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Failed to register university');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleCancel = () => {
+    setOpenDialog(false);
+  };
 
   return (
     <Container maxWidth="sm">
@@ -148,6 +166,30 @@ const RegisterUniversity: React.FC = () => {
           </Box>
         </form>
       </Box>
+
+      {/* Confirmation Dialog */}
+      <Dialog
+        open={openDialog}
+        onClose={handleCancel}
+        aria-labelledby="confirm-dialog-title"
+        aria-describedby="confirm-dialog-description"
+      >
+        <DialogTitle id="confirm-dialog-title">Confirm Registration</DialogTitle>
+        <DialogContent>
+          <DialogContentText id="confirm-dialog-description">
+            Are you sure you want to register the university "{formik.values.name}" with the domain "{formik.values.domain}"?
+            This action will automatically verify the university.
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCancel} color="secondary">
+            Cancel
+          </Button>
+          <Button onClick={handleConfirm} color="primary" autoFocus>
+            Confirm
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Container>
   );
 };

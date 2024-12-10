@@ -23,6 +23,10 @@ interface University {
   id: number;
   name: string;
   domain: string;
+  accreditationDetails?: string;
+  adminAssigned: boolean;
+  adminEmail: string | null;
+  adminAssignedAt: string | null;
 }
 
 const inviteAdminSchema = yup.object({
@@ -37,7 +41,6 @@ const InviteUniversityAdmin: React.FC = () => {
   const [success, setSuccess] = React.useState<string | null>(null);
   const [loading, setLoading] = React.useState<boolean>(false);
 
-  // Fetch verified universities on component mount
   React.useEffect(() => {
     const fetchUniversities = async () => {
       try {
@@ -130,11 +133,14 @@ const InviteUniversityAdmin: React.FC = () => {
               onChange={formik.handleChange}
               error={formik.touched.universityId && Boolean(formik.errors.universityId)}
             >
-              {universities.map((uni) => (
-                <MenuItem key={uni.id} value={uni.id}>
-                  {uni.name} ({uni.domain})
-                </MenuItem>
-              ))}
+              {universities
+                .filter((uni) => !uni.adminAssigned)
+                .map((uni) => (
+                  <MenuItem key={uni.id} value={uni.id}>
+                    {uni.name} ({uni.domain})
+                  </MenuItem>
+                ))
+              }
             </Select>
             {formik.touched.universityId && formik.errors.universityId && (
               <Typography variant="caption" color="error">

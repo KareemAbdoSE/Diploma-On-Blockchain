@@ -24,17 +24,21 @@ interface University {
   name: string;
   domain: string;
   accreditationDetails?: string;
+  createdAt: string;
+  updatedAt: string;
+  adminAssigned: boolean;
+  adminEmail: string | null;
+  adminAssignedAt: string | null;
 }
 
 const PlatformAdminDashboard: React.FC = () => {
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
   const [universities, setUniversities] = useState<University[]>([]);
   const [filteredUniversities, setFilteredUniversities] = useState<University[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState<string>('');
 
-  // Fetch all verified universities
   const fetchVerifiedUniversities = async () => {
     setLoading(true);
     setError(null);
@@ -58,7 +62,6 @@ const PlatformAdminDashboard: React.FC = () => {
     fetchVerifiedUniversities();
   }, []);
 
-  // Handle Search
   const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
     const term = e.target.value.toLowerCase();
     setSearchTerm(term);
@@ -93,7 +96,6 @@ const PlatformAdminDashboard: React.FC = () => {
           <Typography variant="h6" gutterBottom>
             Verified Universities
           </Typography>
-          {/* Search Field */}
           <Box sx={{ mb: 2 }}>
             <TextField
               label="Search by Name or Domain"
@@ -114,6 +116,9 @@ const PlatformAdminDashboard: React.FC = () => {
                     <TableCell>Name</TableCell>
                     <TableCell>Domain</TableCell>
                     <TableCell>Accreditation Details</TableCell>
+                    <TableCell>Status</TableCell>
+                    <TableCell>Admin Email</TableCell>
+                    <TableCell>Admin Signed Up At</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
@@ -125,6 +130,13 @@ const PlatformAdminDashboard: React.FC = () => {
                       <TableCell>
                         {uni.accreditationDetails && uni.accreditationDetails.trim() !== ''
                           ? uni.accreditationDetails
+                          : 'N/A'}
+                      </TableCell>
+                      <TableCell>{uni.adminAssigned ? 'Signed Up' : 'Not Signed Up'}</TableCell>
+                      <TableCell>{uni.adminAssigned ? uni.adminEmail : 'N/A'}</TableCell>
+                      <TableCell>
+                        {uni.adminAssigned && uni.adminAssignedAt
+                          ? new Date(uni.adminAssignedAt).toLocaleString()
                           : 'N/A'}
                       </TableCell>
                     </TableRow>
