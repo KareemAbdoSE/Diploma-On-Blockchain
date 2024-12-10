@@ -16,10 +16,9 @@ import { Op } from 'sequelize';
 import University from '../models/University';
 import { Degree } from '../models/Degree';
 
-
 dotenv.config();
 
-// Register function with email verification token creation
+// Register function for Students with email verification token creation
 export const register = async (req: Request, res: Response) => {
   const { email, password, universityId } = req.body;
 
@@ -43,10 +42,8 @@ export const register = async (req: Request, res: Response) => {
     }
 
     // Check if email domain matches university domain
-    // Extract '@' and what's after it from the student's email
-    const emailDomain = email.substring(email.indexOf('@')).toLowerCase(); // Includes '@'
-    const universityDomain = university.domain.toLowerCase(); // Already includes '@'
-
+    const emailDomain = email.substring(email.indexOf('@')).toLowerCase();
+    const universityDomain = university.domain.toLowerCase();
     if (emailDomain !== universityDomain) {
       return res.status(400).json({ message: 'Email domain does not match university domain' });
     }
@@ -96,7 +93,7 @@ export const register = async (req: Request, res: Response) => {
       degree.status = 'linked';
       await degree.save();
 
-      // Send notification email to the student
+      // Send notification email to the student about linked degree
       await transporter.sendMail({
         to: email,
         subject: 'Degree Linked to Your Account',
@@ -137,8 +134,12 @@ export const login = async (req: Request, res: Response) => {
       return res.status(403).json({ message: 'Please verify your email before logging in' });
     }
 
-    // Check if user is a UniversityAdmin and MFA is enabled
-    if (user.role.name === 'UniversityAdmin' && user.mfaEnabled) {
+    // If UniversityAdmin, ensure MFA is enabled and token provided
+    if (user.role.name === 'UniversityAdmin') {
+      if (!user.mfaEnabled) {
+        return res.status(403).json({ message: 'MFA setup not complete. Please complete MFA setup before logging in.' });
+      }
+
       if (!mfaToken) {
         return res.status(400).json({ message: 'MFA token is required' });
       }
@@ -175,9 +176,7 @@ export const setupMFA = async (req: Request, res: Response) => {
       return res.status(401).json({ message: 'Unauthorized' });
     }
 
-    // Retrieve the user
     const user = await User.findByPk(userId);
-
     if (!user) {
       return res.status(400).json({ message: 'User not found' });
     }
@@ -187,21 +186,16 @@ export const setupMFA = async (req: Request, res: Response) => {
       name: `Diploma Verification (${user.email})`,
     });
 
-    // Temporarily store the secret in the database
     user.mfaTempSecret = secret.base32;
     await user.save();
 
-    // Generate QR code
     const otpAuthURL = secret.otpauth_url;
-
     if (!otpAuthURL) {
       return res.status(500).json({ message: 'Error generating OTP Auth URL' });
     }
 
-    // Generate QR code image URL
     const qrCodeDataURL = await QRCode.toDataURL(otpAuthURL);
 
-    // Send the QR code to the client
     return res.status(200).json({
       message: 'MFA setup initiated',
       qrCodeDataURL,
@@ -220,14 +214,11 @@ export const verifyMFASetup = async (req: Request, res: Response) => {
       return res.status(401).json({ message: 'Unauthorized' });
     }
 
-    // Retrieve the user
     const user = await User.findByPk(userId);
-
     if (!user || !user.mfaTempSecret) {
       return res.status(400).json({ message: 'MFA setup not initiated' });
     }
 
-    // Verify the token
     const verified = speakeasy.totp.verify({
       secret: user.mfaTempSecret,
       encoding: 'base32',
@@ -235,16 +226,12 @@ export const verifyMFASetup = async (req: Request, res: Response) => {
     });
 
     if (verified) {
-      // Save the MFA secret
       user.mfaSecret = user.mfaTempSecret;
       user.mfaEnabled = true;
-      user.mfaTempSecret = null; // Clear the temp secret
-
+      user.mfaTempSecret = null;
       await user.save();
 
-      return res.status(200).json({
-        message: 'MFA setup complete',
-      });
+      return res.status(200).json({ message: 'MFA setup complete' });
     } else {
       return res.status(400).json({ message: 'Invalid MFA token' });
     }
@@ -273,11 +260,9 @@ export const confirmEmail = async (req: Request, res: Response) => {
       return res.status(400).json({ message: 'User not found' });
     }
 
-    // Mark the user as verified
     user.isVerified = true;
     await user.save();
 
-    // Delete the verification token after use
     await VerificationToken.destroy({ where: { id: verificationToken.id } });
 
     return res.status(200).json({ message: 'Email verified successfully' });
@@ -308,33 +293,38 @@ export const registerUniversityAdmin = async (req: Request, res: Response) => {
 
     const { email, universityId } = invitation;
 
-    // Check if the user already exists
     const existingUser = await User.findOne({ where: { email } });
     if (existingUser) {
       return res.status(400).json({ message: 'Email already registered' });
     }
 
-    // Get the UniversityAdmin role
     const universityAdminRole = await Role.findOne({ where: { name: 'UniversityAdmin' } });
     if (!universityAdminRole) {
       return res.status(500).json({ message: 'UniversityAdmin role not found' });
     }
 
-    // Create the new user
     const user = await User.create({
       email,
       password,
       roleId: universityAdminRole.id,
       isVerified: true,
       universityId,
+      mfaEnabled: false, // MFA not set yet
     } as UserCreationAttributes);
 
-    // Delete the invitation token after use
     await InvitationToken.destroy({ where: { id: invitation.id } });
+
+    // Generate a JWT token to allow immediate MFA setup
+    const jwtToken = jwt.sign(
+      { userId: user.id, roleId: user.roleId, role: 'UniversityAdmin' },
+      process.env.JWT_SECRET as string,
+      { expiresIn: process.env.JWT_EXPIRES_IN || '1h' }
+    );
 
     return res.status(201).json({
       message: 'University Admin registered successfully.',
       userId: user.id,
+      token: jwtToken,
     });
   } catch (error) {
     return res.status(500).json({ message: 'Error registering university admin', error });
