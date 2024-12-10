@@ -7,6 +7,7 @@ import {
   Box,
   CircularProgress,
   Alert,
+  Typography,
 } from '@mui/material';
 import { useFormik } from 'formik';
 import * as yup from 'yup';
@@ -14,17 +15,12 @@ import axiosInstance from '../../utils/axiosConfig';
 import { useNavigate } from 'react-router-dom';
 
 interface UniversityAdminSignUpValues {
-  email: string;
   password: string;
   confirmPassword: string;
   invitationToken: string;
 }
 
 const validationSchema = yup.object({
-  email: yup
-    .string()
-    .email('Enter a valid email')
-    .required('Email is required'),
   password: yup
     .string()
     .min(8, 'Password should be of minimum 8 characters length')
@@ -44,9 +40,14 @@ const UniversityAdminSignUpForm: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(false);
   const navigate = useNavigate();
 
+  const [showMfaSetup, setShowMfaSetup] = useState(false);
+  const [qrCodeDataURL, setQrCodeDataURL] = useState<string | null>(null);
+  const [mfaToken, setMfaToken] = useState<string>('');
+  const [mfaError, setMfaError] = useState<string | null>(null);
+  const [mfaSuccess, setMfaSuccess] = useState<string | null>(null);
+
   const formik = useFormik<UniversityAdminSignUpValues>({
     initialValues: {
-      email: '',
       password: '',
       confirmPassword: '',
       invitationToken: '',
@@ -58,7 +59,6 @@ const UniversityAdminSignUpForm: React.FC = () => {
       setLoading(true);
       try {
         const response = await axiosInstance.post('/api/auth/register-university-admin', {
-          email: values.email,
           password: values.password,
           token: values.invitationToken,
         });
@@ -66,10 +66,21 @@ const UniversityAdminSignUpForm: React.FC = () => {
         setSuccess(response.data.message || 'Registration successful!');
         formik.resetForm();
 
-        // Optionally, redirect to login page after a delay
-        setTimeout(() => {
-          navigate('/login');
-        }, 2000);
+        const receivedToken = response.data.token;
+        if (!receivedToken) {
+          setError('No token returned. Please contact support.');
+          setLoading(false);
+          return;
+        }
+
+        localStorage.setItem('token', receivedToken);
+
+        // Initiate MFA setup
+        const mfaSetupResponse = await axiosInstance.post('/api/auth/mfa/setup');
+        const qrCodeData = mfaSetupResponse.data.qrCodeDataURL;
+        setQrCodeDataURL(qrCodeData);
+        setShowMfaSetup(true);
+
       } catch (err: any) {
         setError(err.response?.data?.message || 'Registration failed.');
       } finally {
@@ -77,6 +88,24 @@ const UniversityAdminSignUpForm: React.FC = () => {
       }
     },
   });
+
+  const handleMfaVerification = async () => {
+    setMfaError(null);
+    setMfaSuccess(null);
+    try {
+      const verifyResponse = await axiosInstance.post('/api/auth/mfa/verify-setup', {
+        token: mfaToken,
+      });
+      setMfaSuccess(verifyResponse.data.message || 'MFA setup complete!');
+
+      // Redirect to dashboard after a short delay
+      setTimeout(() => {
+        navigate('/dashboard', { replace: true });
+      }, 2000);
+    } catch (error: any) {
+      setMfaError(error.response?.data?.message || 'MFA verification failed.');
+    }
+  };
 
   return (
     <form onSubmit={formik.handleSubmit}>
@@ -97,22 +126,6 @@ const UniversityAdminSignUpForm: React.FC = () => {
             formik.touched.invitationToken &&
             formik.errors.invitationToken
           }
-        />
-      </Box>
-
-      <Box sx={{ mb: 2 }}>
-        <TextField
-          fullWidth
-          id="email"
-          name="email"
-          label="Email"
-          variant="outlined"
-          value={formik.values.email}
-          onChange={formik.handleChange}
-          error={
-            formik.touched.email && Boolean(formik.errors.email)
-          }
-          helperText={formik.touched.email && formik.errors.email}
         />
       </Box>
 
@@ -163,19 +176,19 @@ const UniversityAdminSignUpForm: React.FC = () => {
         </Alert>
       )}
 
-      {success && (
+      {success && !showMfaSetup && (
         <Alert severity="success" sx={{ mb: 2 }}>
           {success}
         </Alert>
       )}
 
-      <Box sx={{ position: 'relative' }}>
+      <Box sx={{ position: 'relative', mb: 2 }}>
         <Button
           color="primary"
           variant="contained"
           fullWidth
           type="submit"
-          disabled={loading}
+          disabled={loading || showMfaSetup}
         >
           Register as University Admin
         </Button>
@@ -192,6 +205,47 @@ const UniversityAdminSignUpForm: React.FC = () => {
           />
         )}
       </Box>
+
+      {showMfaSetup && (
+        <Box sx={{ mt: 4 }}>
+          <Typography variant="h6" gutterBottom>
+            Set up MFA
+          </Typography>
+          {qrCodeDataURL && (
+            <div>
+              <Typography>Please scan the QR code with your authenticator app:</Typography>
+              <img src={qrCodeDataURL} alt="MFA QR Code" style={{ margin: '20px 0' }} />
+            </div>
+          )}
+          <TextField
+            fullWidth
+            margin="normal"
+            label="Enter TOTP Code"
+            variant="outlined"
+            value={mfaToken}
+            onChange={(e) => setMfaToken(e.target.value)}
+          />
+          {mfaError && (
+            <Alert severity="error" sx={{ mb: 2 }}>
+              {mfaError}
+            </Alert>
+          )}
+          {mfaSuccess && (
+            <Alert severity="success" sx={{ mb: 2 }}>
+              {mfaSuccess}
+            </Alert>
+          )}
+          <Button
+            color="secondary"
+            variant="contained"
+            fullWidth
+            onClick={handleMfaVerification}
+            disabled={!mfaToken}
+          >
+            Verify MFA Setup
+          </Button>
+        </Box>
+      )}
     </form>
   );
 };

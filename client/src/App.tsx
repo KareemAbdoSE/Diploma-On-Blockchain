@@ -17,7 +17,6 @@ import StudentDashboard from './pages/StudentDashboard';
 import PlatformAdminDashboard from './pages/PlatformAdminDashboard';
 import RegisterUniversity from './pages/RegisterUniversity';
 import InviteUniversityAdmin from './pages/InviteUniversityAdmin';
-import RegisterUniversityAdmin from './pages/RegisterUniversityAdmin'; // University Admin Registration
 
 const App: React.FC = () => {
   return (
@@ -25,7 +24,6 @@ const App: React.FC = () => {
       {/* Public Routes */}
       <Route path="/login" element={<LoginPage />} />
       <Route path="/signup" element={<SignUpPage />} />
-      <Route path="/register-university-admin" element={<RegisterUniversityAdmin />} />
 
       {/* Protected Routes */}
       <Route
