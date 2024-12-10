@@ -7,7 +7,9 @@ import {
   Tab,
   Box,
   Typography,
+  Link,
 } from '@mui/material';
+import { Link as RouterLink } from 'react-router-dom';
 import StudentSignUpForm from './StudentSignUpForm';
 import UniversityAdminSignUpForm from './UniversityAdminSignUpForm';
 
@@ -37,6 +39,14 @@ const SignUpPage: React.FC = () => {
         <Box sx={{ mt: 3 }}>
           {tabValue === 0 && <StudentSignUpForm />}
           {tabValue === 1 && <UniversityAdminSignUpForm />}
+        </Box>
+        <Box sx={{ mt: 2, textAlign: 'center' }}>
+          <Typography variant="body2">
+            Already have an account?{' '}
+            <Link component={RouterLink} to="/login">
+              Login here
+            </Link>
+          </Typography>
         </Box>
       </Box>
     </Container>
