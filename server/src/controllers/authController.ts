@@ -114,13 +114,11 @@ export const login = async (req: Request, res: Response) => {
   const { email, password, mfaToken } = req.body;
 
   try {
-    // Validate input
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
       return res.status(400).json({ errors: errors.array() });
     }
 
-    // Retrieve the user
     const user = await User.findOne({
       where: { email },
       include: [Role],
@@ -134,12 +132,24 @@ export const login = async (req: Request, res: Response) => {
       return res.status(403).json({ message: 'Please verify your email before logging in' });
     }
 
-    // If UniversityAdmin, ensure MFA is enabled and token provided
-    if (user.role.name === 'UniversityAdmin') {
-      if (!user.mfaEnabled) {
-        return res.status(403).json({ message: 'MFA setup not complete. Please complete MFA setup before logging in.' });
-      }
+    // Check if University Admin and MFA not enabled
+    if (user.role.name === 'UniversityAdmin' && !user.mfaEnabled) {
+      // Generate a temporary token to proceed with MFA setup
+      const tempToken = jwt.sign(
+        { userId: user.id, roleId: user.roleId, role: 'UniversityAdmin' },
+        process.env.JWT_SECRET as string,
+        { expiresIn: process.env.JWT_EXPIRES_IN || '1h' }
+      );
 
+      return res.status(200).json({
+        message: 'MFA setup required. Please set up MFA before logging in.',
+        mfaRequired: true,
+        token: tempToken,
+      });
+    }
+
+    // If University Admin and MFA is enabled, verify the provided mfaToken
+    if (user.role.name === 'UniversityAdmin' && user.mfaEnabled) {
       if (!mfaToken) {
         return res.status(400).json({ message: 'MFA token is required' });
       }
@@ -155,7 +165,7 @@ export const login = async (req: Request, res: Response) => {
       }
     }
 
-    // Generate JWT token
+    // Generate final JWT token for authenticated user
     const token = jwt.sign(
       { userId: user.id, roleId: user.roleId, role: user.role.name },
       process.env.JWT_SECRET as string,
@@ -167,6 +177,7 @@ export const login = async (req: Request, res: Response) => {
     return res.status(500).json({ message: 'An unexpected error occurred during login.' });
   }
 };
+
 
 export const setupMFA = async (req: Request, res: Response) => {
   const userId = req.user?.userId;
