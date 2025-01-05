@@ -197,15 +197,30 @@ Ensure you have the following installed:
   - Email verification using Nodemailer.
 - **Role-Based Access Control (RBAC)**: Implemented to manage permissions based on user roles (Student, UniversityAdmin, PlatformAdmin).
 
+## Disclaimer
+
+This code is made publicly available solely for review and evaluation by potential employers. Unauthorized forking, copying, reproduction, modification, or redistribution of this repository, in part or in whole, is strictly prohibited. By accessing this repository, you agree to these terms. 
+
+For permissions or inquiries, please contact [kareemabdose@gmail.com](mailto:kareemabdose@gmail.com).
+
+---
+
+## Copyright and License
+
+**View-Only License**
+
+Copyright (c) 2024 Kareem Abdo. All Rights Reserved.
+
+This project is publicly accessible for review purposes only. Unauthorized forking, copying, modification, redistribution, or use of this project, in part or in whole, is strictly prohibited without prior written consent from Kareem Abdo.
+
+### Important Notices:
+- The repository is provided for viewing and evaluation purposes only. Forking or cloning is not permitted.
+- Any unauthorized use will be considered a violation of the terms outlined in this license.
 
 
 ## Contributing
 
 Contributions are welcome once the project reaches a stable state. Guidelines for contributing will be added soon.
-
-## License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
 ## Contact
 
